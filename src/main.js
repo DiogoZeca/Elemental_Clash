@@ -1,14 +1,10 @@
 import * as THREE from 'three';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { 
-  loadMetalPlateModel, 
-  setupModel, 
-  createMetalPlateMaterial, 
   createWallEnvironment,
-  createMetalMaterial,
-  createMetalFloor,
   createMetalCeiling,
-  createConcreteMaterial
+  createTilesFloor
 } from './sceneLoader.js';
 
 // ---- SCENE SETUP ----
@@ -30,6 +26,13 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
+
+// Add camera controls
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; // Adds smoothness to the controls
+controls.dampingFactor = 0.05;
+controls.minDistance = 1;
+controls.maxDistance = 10;
 
 // Optional: Performance stats
 const stats = new Stats();
@@ -57,7 +60,8 @@ scene.add(pointLight);
 function animate() {
   requestAnimationFrame(animate);
   
-  // Update any animations here
+  // Update controls
+  controls.update();
   
   // Render scene
   renderer.render(scene, camera);
@@ -82,48 +86,47 @@ async function init() {
   // Render the scene immediately to see if basic rendering works
   renderer.render(scene, camera);
 
-    // Define shared configuration for consistent dimensions
-    const sharedConfig = {
-      wallHeight: 15,      // Wall height
-      floorLevel: -3,      // Floor level
-      wallOffset: -10,     // Back wall position
-      roomWidth: 20,       // Width of the room (X-axis)
-      roomDepth: 15        // Depth of the room (Z-axis)
-    };
+  // Define shared configuration for consistent dimensions
+  const sharedConfig = {
+    wallHeight: 12,      // Wall height
+    floorLevel: -3,      // Floor level
+    wallOffset: -13,     // Back wall position
+    roomWidth: 25,       // Width of the room (X-axis)
+    roomDepth: 17        // Depth of the room (Z-axis)
+  };
   
-    try {
-      // Load environment elements in parallel
-      console.log("Starting to load assets...");
-      await Promise.all([
-        // Use concrete walls
-        createWallEnvironment(scene, {
-          wallHeight: sharedConfig.wallHeight,  
-          floorLevel: sharedConfig.floorLevel,
-          wallOffset: sharedConfig.wallOffset,
-          backWallWidth: sharedConfig.roomWidth,
-          sideWallLength: sharedConfig.roomDepth,
-          useConcrete: true    // Use concrete texture
-        }),
-        
-        // Create metal floor
-        createMetalFloor(scene, {
-          width: sharedConfig.roomWidth,
-          depth: sharedConfig.roomDepth,
-          floorLevel: sharedConfig.floorLevel,
-          wallOffset: sharedConfig.wallOffset,
-          useNewMetal: true    // Use new Metal023 texture
-        }),
-        
-        // Add metal ceiling
-        createMetalCeiling(scene, {
-          width: sharedConfig.roomWidth,
-          depth: sharedConfig.roomDepth,
-          ceilingHeight: sharedConfig.wallHeight, // Match wall height
-          floorLevel: sharedConfig.floorLevel,
-          wallOffset: sharedConfig.wallOffset,
-          useNewMetal: true    // Use new Metal023 texture
-        })
-      ]);
+  try {
+    // Load environment elements in parallel
+    console.log("Starting to load assets...");
+    await Promise.all([
+      // Use concrete walls
+      createWallEnvironment(scene, {
+        wallHeight: sharedConfig.wallHeight,  
+        floorLevel: sharedConfig.floorLevel,
+        wallOffset: sharedConfig.wallOffset,
+        backWallWidth: sharedConfig.roomWidth,
+        sideWallLength: sharedConfig.roomDepth,
+        useConcrete: true    // Use concrete texture
+      }),
+      
+      // Create tiles floor
+      createTilesFloor(scene, {
+        width: sharedConfig.roomWidth,
+        depth: sharedConfig.roomDepth,
+        floorLevel: sharedConfig.floorLevel,
+        wallOffset: sharedConfig.wallOffset
+      }),
+      
+      // Metal ceiling
+      createMetalCeiling(scene, {
+        width: sharedConfig.roomWidth,
+        depth: sharedConfig.roomDepth,
+        ceilingHeight: sharedConfig.wallHeight,
+        floorLevel: sharedConfig.floorLevel,
+        wallOffset: sharedConfig.wallOffset,
+        useNewMetal: true
+      })
+    ]);
     
     // Remove the simple cube once everything is loaded
     scene.remove(simpleCube);

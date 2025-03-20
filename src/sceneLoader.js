@@ -1,87 +1,37 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-// Cache for loaded models and textures
-const modelCache = new Map();
+// Texture cache
 const textureCache = new Map();
 
 /**
- * Loads a GLTF model and returns it via Promise
- * @param {string} path - Path to the GLTF file
- * @param {Function} onProgress - Optional callback for loading progress
- * @returns {Promise<THREE.Group>} The loaded model
+ * Helper function to load textures
+ * @param {string} path - Path to the texture file
+ * @param {Object} options - Optional settings for the texture
+ * @returns {Promise<THREE.Texture>} - The loaded texture 
  */
-export function loadGLTFModel(path, onProgress) {
-  // Return cached model if available
-  if (modelCache.has(path)) {
-    return Promise.resolve(modelCache.get(path).clone());
+function loadTexture(path, options = {}) {
+  const { repeat = [1, 1] } = options;
+
+  if (textureCache.has(path)) {
+    return Promise.resolve(textureCache.get(path));
   }
   
-  const loader = new GLTFLoader();
-  
-  return new Promise((resolve, reject) => {
-    loader.load(
-      path, 
-      (gltf) => {
-        // Store in cache for future use
-        modelCache.set(path, gltf.scene.clone());
-        resolve(gltf.scene);
-      },
-      onProgress,
-      (error) => reject(new Error(`Failed to load model: ${path}, ${error}`))
-    );
-  });
-}
-
-/**
- * Loads the metal plate model specifically
- * @returns {Promise<THREE.Group>} The metal plate model
- */
-export function loadMetalPlateModel() {
-  return loadGLTFModel('models/textures/metal_plate_02_4k.gltf/metal_plate_02_4k.gltf');
-}
-
-/**
- * Loads the metal plate textures for use as wall material
- * @returns {Promise<Object>} The loaded textures
- */
-export function loadMetalPlateTextures() {
   const textureLoader = new THREE.TextureLoader();
-  const basePath = 'models/textures/metal_plate_02_4k.gltf/textures/';
-  
-  const loadTexture = (path) => {
-    if (textureCache.has(path)) {
-      return Promise.resolve(textureCache.get(path).clone());
-    }
-    
-    return new Promise((resolve, reject) => {
-      textureLoader.load(
-        path,
-        (texture) => {
-          // Configure texture for proper tiling
-          texture.wrapS = THREE.RepeatWrapping;
-          texture.wrapT = THREE.RepeatWrapping;
-          texture.repeat.set(2, 2); // Adjust repeating as needed
-          
-          textureCache.set(path, texture);
-          resolve(texture);
-        },
-        undefined,
-        (error) => reject(new Error(`Failed to load texture: ${path}, ${error}`))
-      );
-    });
-  };
-  
-  return Promise.all([
-    loadTexture(`${basePath}metal_plate_02_diff_4k.jpg`),  // Diffuse (color)
-    loadTexture(`${basePath}metal_plate_02_nor_gl_4k.jpg`), // Normal map
-    loadTexture(`${basePath}metal_plate_02_arm_4k.jpg`),   // AO/Roughness/Metallic
-  ]).then(([diffuse, normal, arm]) => {
-    return {
-      diffuse,
-      normal,
-      arm
-    };
+  return new Promise((resolve, reject) => {
+    textureLoader.load(
+      path,
+      (texture) => {
+        // Configure texture for proper tiling
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(repeat[0], repeat[1]);
+        
+        textureCache.set(path, texture);
+        resolve(texture);
+      },
+      undefined,
+      (error) => reject(new Error(`Failed to load texture: ${path}, ${error}`))
+    );
   });
 }
 
@@ -89,39 +39,15 @@ export function loadMetalPlateTextures() {
  * Loads the new metal textures (Metal023)
  * @returns {Promise<Object>} The loaded textures
  */
-export function loadMetalTextures() {
-  const textureLoader = new THREE.TextureLoader();
+function loadMetalTextures() {
   const basePath = 'models/textures/Metal023_4K-PNG/';
   
-  const loadTexture = (path) => {
-    if (textureCache.has(path)) {
-      return Promise.resolve(textureCache.get(path));
-    }
-    
-    return new Promise((resolve, reject) => {
-      textureLoader.load(
-        path,
-        (texture) => {
-          // Configure texture for proper tiling
-          texture.wrapS = THREE.RepeatWrapping;
-          texture.wrapT = THREE.RepeatWrapping;
-          texture.repeat.set(3, 3); // Adjust repeating as needed
-          
-          textureCache.set(path, texture);
-          resolve(texture);
-        },
-        undefined,
-        (error) => reject(new Error(`Failed to load texture: ${path}, ${error}`))
-      );
-    });
-  };
-  
   return Promise.all([
-    loadTexture(`${basePath}Metal023_4K-PNG_Color.png`),
-    loadTexture(`${basePath}Metal023_4K-PNG_NormalGL.png`),
-    loadTexture(`${basePath}Metal023_4K-PNG_Roughness.png`),
-    loadTexture(`${basePath}Metal023_4K-PNG_Metalness.png`),
-    loadTexture(`${basePath}Metal023_4K-PNG_Displacement.png`),
+    loadTexture(`${basePath}Metal023_4K-PNG_Color.png`, { repeat: [3, 3] }),
+    loadTexture(`${basePath}Metal023_4K-PNG_NormalGL.png`, { repeat: [3, 3] }),
+    loadTexture(`${basePath}Metal023_4K-PNG_Roughness.png`, { repeat: [3, 3] }),
+    loadTexture(`${basePath}Metal023_4K-PNG_Metalness.png`, { repeat: [3, 3] }),
+    loadTexture(`${basePath}Metal023_4K-PNG_Displacement.png`, { repeat: [3, 3] }),
   ]).then(([color, normal, roughness, metalness, displacement]) => {
     return {
       color,
@@ -137,39 +63,39 @@ export function loadMetalTextures() {
  * Loads the concrete textures (Concrete033)
  * @returns {Promise<Object>} The loaded textures
  */
-export function loadConcreteTextures() {
-  const textureLoader = new THREE.TextureLoader();
+function loadConcreteTextures() {
   const basePath = 'models/textures/Concrete033_4K-PNG/';
   
-  const loadTexture = (path) => {
-    if (textureCache.has(path)) {
-      return Promise.resolve(textureCache.get(path));
-    }
-    
-    return new Promise((resolve, reject) => {
-      textureLoader.load(
-        path,
-        (texture) => {
-          // Configure texture for proper tiling
-          texture.wrapS = THREE.RepeatWrapping;
-          texture.wrapT = THREE.RepeatWrapping;
-          texture.repeat.set(2, 2); // Adjust repeating as needed
-          
-          textureCache.set(path, texture);
-          resolve(texture);
-        },
-        undefined,
-        (error) => reject(new Error(`Failed to load texture: ${path}, ${error}`))
-      );
-    });
-  };
+  return Promise.all([
+    loadTexture(`${basePath}Concrete033_4K-PNG_Color.png`, { repeat: [2, 2] }),
+    loadTexture(`${basePath}Concrete033_4K-PNG_NormalGL.png`, { repeat: [2, 2] }),
+    loadTexture(`${basePath}Concrete033_4K-PNG_Roughness.png`, { repeat: [2, 2] }),
+    loadTexture(`${basePath}Concrete033_4K-PNG_AmbientOcclusion.png`, { repeat: [2, 2] }),
+    loadTexture(`${basePath}Concrete033_4K-PNG_Displacement.png`, { repeat: [2, 2] }),
+  ]).then(([color, normal, roughness, ao, displacement]) => {
+    return {
+      color,
+      normal,
+      roughness,
+      ao,
+      displacement
+    };
+  });
+}
+
+/**
+ * Loads the tile textures (Tiles133D)
+ * @returns {Promise<Object>} The loaded textures
+ */
+function loadTilesTextures() {
+  const basePath = 'models/textures/Tiles133D_2K-PNG/';
   
   return Promise.all([
-    loadTexture(`${basePath}Concrete033_4K-PNG_Color.png`),
-    loadTexture(`${basePath}Concrete033_4K-PNG_NormalGL.png`),
-    loadTexture(`${basePath}Concrete033_4K-PNG_Roughness.png`),
-    loadTexture(`${basePath}Concrete033_4K-PNG_AmbientOcclusion.png`),
-    loadTexture(`${basePath}Concrete033_4K-PNG_Displacement.png`),
+    loadTexture(`${basePath}Tiles133D_2K-PNG_Color.png`, { repeat: [4, 4] }),
+    loadTexture(`${basePath}Tiles133D_2K-PNG_NormalGL.png`, { repeat: [4, 4] }),
+    loadTexture(`${basePath}Tiles133D_2K-PNG_Roughness.png`, { repeat: [4, 4] }),
+    loadTexture(`${basePath}Tiles133D_2K-PNG_AmbientOcclusion.png`, { repeat: [4, 4] }),
+    loadTexture(`${basePath}Tiles133D_2K-PNG_Displacement.png`, { repeat: [4, 4] }),
   ]).then(([color, normal, roughness, ao, displacement]) => {
     return {
       color,
@@ -185,7 +111,7 @@ export function loadConcreteTextures() {
  * Creates a PBR material using concrete textures
  * @returns {Promise<THREE.MeshStandardMaterial>} The created material
  */
-export function createConcreteMaterial() {
+function createConcreteMaterial() {
   return loadConcreteTextures().then(textures => {
     const material = new THREE.MeshStandardMaterial({
       map: textures.color,
@@ -193,7 +119,7 @@ export function createConcreteMaterial() {
       roughnessMap: textures.roughness,
       aoMap: textures.ao,
       displacementMap: textures.displacement,
-      displacementScale: 0.1, // Adjust based on your scene scale
+      displacementScale: 0.1,
       roughness: 1.0,
       metalness: 0.0
     });
@@ -203,19 +129,23 @@ export function createConcreteMaterial() {
 }
 
 /**
- * Creates a PBR material using metal plate textures
+ * Creates a PBR material using tile textures
  * @returns {Promise<THREE.MeshStandardMaterial>} The created material
  */
-export function createMetalPlateMaterial() {
-  return loadMetalPlateTextures().then(textures => {
-    return new THREE.MeshStandardMaterial({
-      map: textures.diffuse,
+function createTilesMaterial() {
+  return loadTilesTextures().then(textures => {
+    const material = new THREE.MeshStandardMaterial({
+      map: textures.color,
       normalMap: textures.normal,
-      metalnessMap: textures.arm,
-      roughnessMap: textures.arm,
-      metalness: 0.8,
-      roughness: 0.6
+      roughnessMap: textures.roughness,
+      aoMap: textures.ao,
+      displacementMap: textures.displacement,
+      displacementScale: 0.05,
+      roughness: 0.8,
+      metalness: 0.1
     });
+    
+    return material;
   });
 }
 
@@ -223,7 +153,7 @@ export function createMetalPlateMaterial() {
  * Creates a PBR material using new metal textures
  * @returns {Promise<THREE.MeshStandardMaterial>} The created material
  */
-export function createMetalMaterial() {
+function createMetalMaterial() {
   return loadMetalTextures().then(textures => {
     const material = new THREE.MeshStandardMaterial({
       map: textures.color,
@@ -231,7 +161,7 @@ export function createMetalMaterial() {
       roughnessMap: textures.roughness,
       metalnessMap: textures.metalness,
       displacementMap: textures.displacement,
-      displacementScale: 0.05, // Adjust based on your scene scale
+      displacementScale: 0.05,
       metalness: 0.9,
       roughness: 0.4
     });
@@ -241,57 +171,55 @@ export function createMetalMaterial() {
 }
 
 /**
- * Creates a floor with metal texture that aligns with the walls
+ * Creates a floor with tile texture that aligns with the walls
  * @param {THREE.Scene} scene - The scene to add the floor to
  * @param {Object} options - Configuration options
  * @returns {Promise<THREE.Mesh>} - The created floor
  */
-export async function createMetalFloor(scene, options = {}) {
+export async function createTilesFloor(scene, options = {}) {
   try {
-    console.log('Creating metal textured floor...');
+    console.log('Creating tiles textured floor...');
     
     // Default options
     const config = {
       width: options.width || 20,
       depth: options.depth || 15,
       floorLevel: options.floorLevel || -3,
-      wallOffset: options.wallOffset || -10, // Z position of back wall (for alignment)
-      useNewMetal: options.useNewMetal !== false, // Use new metal by default
+      wallOffset: options.wallOffset || -10
     };
     
-    // Get appropriate material
+    // Get tiles material
     let floorMaterial;
     try {
-      if (config.useNewMetal) {
-        floorMaterial = await createMetalMaterial();
-      } else {
-        floorMaterial = await createMetalPlateMaterial();
-      }
+      floorMaterial = await createTilesMaterial();
+      console.log('Using tiles material for floor');
     } catch (error) {
-      console.error('Failed to load metal floor material:', error);
-      floorMaterial = new THREE.MeshStandardMaterial({ color: 0x777777 });
+      console.error('Failed to load tiles floor material:', error);
+      floorMaterial = new THREE.MeshStandardMaterial({ color: 0x999999 });
     }
     
-    // Create floor mesh
+    // Create floor mesh with second set of UVs for aoMap
     const floorGeometry = new THREE.PlaneGeometry(config.width, config.depth);
+    floorGeometry.setAttribute('uv2', floorGeometry.attributes.uv.clone());
+    
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2; // Rotate to be horizontal
     
     // Position floor to align with back wall
     floor.position.set(
-      0,                // Centered on X
-      config.floorLevel, // At floor level
-      config.wallOffset + (config.depth / 2) // Align with back wall
+      0,
+      config.floorLevel, 
+      config.wallOffset + (config.depth / 2)
     );
     
     floor.receiveShadow = true;
     
     scene.add(floor);
-    console.log('Metal floor created successfully');
+    console.log('Tiles floor created successfully');
     return floor;
     
   } catch (error) {
-    console.error('Error creating metal floor:', error);
+    console.error('Error creating tiles floor:', error);
     return null;
   }
 }
@@ -310,20 +238,15 @@ export async function createMetalCeiling(scene, options = {}) {
     const config = {
       width: options.width || 20,
       depth: options.depth || 15,
-      ceilingHeight: options.ceilingHeight || 12, // Height of ceiling
-      floorLevel: options.floorLevel || -3,       // Reference for height calculation
-      wallOffset: options.wallOffset || -10,      // Z position of back wall (for alignment)
-      useNewMetal: options.useNewMetal !== false, // Use new metal by default
+      ceilingHeight: options.ceilingHeight || 12,
+      floorLevel: options.floorLevel || -3,
+      wallOffset: options.wallOffset || -10
     };
     
     // Get appropriate material
     let ceilingMaterial;
     try {
-      if (config.useNewMetal) {
-        ceilingMaterial = await createMetalMaterial();
-      } else {
-        ceilingMaterial = await createMetalPlateMaterial();
-      }
+      ceilingMaterial = await createMetalMaterial();
     } catch (error) {
       console.error('Failed to load metal ceiling material:', error);
       ceilingMaterial = new THREE.MeshStandardMaterial({ color: 0x777777 });
@@ -336,9 +259,9 @@ export async function createMetalCeiling(scene, options = {}) {
     
     // Position ceiling to align with back wall and side walls
     ceiling.position.set(
-      0,                                        // Centered on X
-      config.floorLevel + config.ceilingHeight, // At ceiling height
-      config.wallOffset + (config.depth / 2)    // Align with back wall
+      0,
+      config.floorLevel + config.ceilingHeight,
+      config.wallOffset + (config.depth / 2)
     );
     
     ceiling.receiveShadow = true;
@@ -369,10 +292,9 @@ export async function createWallEnvironment(scene, options = {}) {
       backWallWidth: options.backWallWidth || 20,
       sideWallLength: options.sideWallLength || 15,
       wallDepth: options.wallDepth || 0.2,
-      wallOffset: options.wallOffset || -10, // Z position of back wall
-      floorLevel: options.floorLevel || -3,   // Y position offset for the base of walls
-      useNewMetal: options.useNewMetal || false,  // Don't use metal by default
-      useConcrete: options.useConcrete || false,  // Don't use concrete by default
+      wallOffset: options.wallOffset || -10,
+      floorLevel: options.floorLevel || -3,
+      useConcrete: options.useConcrete || false
     };
     
     // Get appropriate material
@@ -381,9 +303,6 @@ export async function createWallEnvironment(scene, options = {}) {
       if (config.useConcrete) {
         wallMaterial = await createConcreteMaterial();
         console.log('Using concrete material for walls');
-      } else if (config.useNewMetal) {
-        wallMaterial = await createMetalMaterial();
-        console.log('Using metal material for walls');
       } else {
         // Fallback to basic material
         wallMaterial = new THREE.MeshStandardMaterial({ 
@@ -400,17 +319,6 @@ export async function createWallEnvironment(scene, options = {}) {
         roughness: 0.75,
         metalness: 0.2
       });
-    }
-    
-    // Set uvs for concrete texture
-    if (config.useConcrete) {
-      // Create UV coordinates for the walls
-      function setupUVs(geometry, width, height) {
-        const uvs = geometry.attributes.uv;
-        for (let i = 0; i < uvs.count; i++) {
-          uvs.setXY(i, uvs.getX(i) * (width / 5), uvs.getY(i) * (height / 5));
-        }
-      }
     }
     
     // 1. BACK WALL
@@ -482,43 +390,4 @@ export async function createWallEnvironment(scene, options = {}) {
     
     return { backWall: wall };
   }
-}
-
-/**
- * Helper function to position and scale a model after loading
- * @param {THREE.Object3D} model - The loaded model
- * @param {Object} options - Position, rotation, scale options
- */
-export function setupModel(model, options = {}) {
-  const { position, rotation, scale } = options;
-  
-  if (position) {
-    model.position.set(
-      position.x || 0,
-      position.y || 0,
-      position.z || 0
-    );
-  }
-  
-  if (rotation) {
-    model.rotation.set(
-      rotation.x || 0,
-      rotation.y || 0,
-      rotation.z || 0
-    );
-  }
-  
-  if (scale) {
-    if (typeof scale === 'number') {
-      model.scale.set(scale, scale, scale);
-    } else {
-      model.scale.set(
-        scale.x || 1,
-        scale.y || 1,
-        scale.z || 1
-      );
-    }
-  }
-  
-  return model;
 }
