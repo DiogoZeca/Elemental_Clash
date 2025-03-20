@@ -106,7 +106,8 @@ async function init() {
         wallOffset: sharedConfig.wallOffset,
         backWallWidth: sharedConfig.roomWidth,
         sideWallLength: sharedConfig.roomDepth,
-        useConcrete: true    // Use concrete texture
+        useConcrete: true,    // Use concrete texture
+        includeFrontWall: true
       }),
       
       // Create tiles floor

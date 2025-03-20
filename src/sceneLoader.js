@@ -294,7 +294,8 @@ export async function createWallEnvironment(scene, options = {}) {
       wallDepth: options.wallDepth || 0.2,
       wallOffset: options.wallOffset || -10,
       floorLevel: options.floorLevel || -3,
-      useConcrete: options.useConcrete || false
+      useConcrete: options.useConcrete || true,
+      includeFrontWall: options.includeFrontWall || true
     };
     
     // Get appropriate material
@@ -368,13 +369,73 @@ export async function createWallEnvironment(scene, options = {}) {
     rightWall.castShadow = true;
     rightWall.receiveShadow = true;
     scene.add(rightWall);
+
+    // 4. FRONT WALL (NEW)
+    let frontWall = null;
+    if (config.includeFrontWall) {
+      // Create doorway
+      const doorWidth = 4;
+      const doorHeight = 8;
+      
+      // Left section of front wall
+      const leftFrontWallGeometry = new THREE.BoxGeometry(
+        (config.backWallWidth - doorWidth) / 2, 
+        config.wallHeight, 
+        config.wallDepth
+      );
+      const leftFrontWall = new THREE.Mesh(leftFrontWallGeometry, wallMaterial);
+      leftFrontWall.position.set(
+        -(config.backWallWidth + doorWidth) / 4, 
+        config.wallHeight/2 + config.floorLevel, 
+        config.wallOffset + config.sideWallLength
+      );
+      leftFrontWall.castShadow = true;
+      leftFrontWall.receiveShadow = true;
+      scene.add(leftFrontWall);
+      
+      // Right section of front wall
+      const rightFrontWallGeometry = new THREE.BoxGeometry(
+        (config.backWallWidth - doorWidth) / 2, 
+        config.wallHeight, 
+        config.wallDepth
+      );
+      const rightFrontWall = new THREE.Mesh(rightFrontWallGeometry, wallMaterial);
+      rightFrontWall.position.set(
+        (config.backWallWidth + doorWidth) / 4, 
+        config.wallHeight/2 + config.floorLevel, 
+        config.wallOffset + config.sideWallLength
+      );
+      rightFrontWall.castShadow = true;
+      rightFrontWall.receiveShadow = true;
+      scene.add(rightFrontWall);
+      
+      // Top section of front wall (above door)
+      const topFrontWallGeometry = new THREE.BoxGeometry(
+        doorWidth, 
+        config.wallHeight - doorHeight, 
+        config.wallDepth
+      );
+      const topFrontWall = new THREE.Mesh(topFrontWallGeometry, wallMaterial);
+      topFrontWall.position.set(
+        0, 
+        config.floorLevel + config.wallHeight - (config.wallHeight - doorHeight) / 2, 
+        config.wallOffset + config.sideWallLength
+      );
+      topFrontWall.castShadow = true;
+      topFrontWall.receiveShadow = true;
+      scene.add(topFrontWall);
+      
+      frontWall = { leftFrontWall, rightFrontWall, topFrontWall };
+      console.log('Front wall with doorway created successfully');
+    }
     
     console.log('3-wall environment created successfully');
     
     return {
       backWall,
       leftWall,
-      rightWall
+      rightWall,
+      frontWall
     };
   } catch (error) {
     console.error('Error creating walls:', error);
