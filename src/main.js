@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { 
   createWallEnvironment,
   createMetalCeiling,
@@ -15,18 +14,22 @@ import {
 
 // ---- CONSTANTS & CONFIGURATION ----
 const SCENE_CONFIG = {
-  wallHeight: 12,      // Wall height
-  floorLevel: -3,      // Floor level
-  wallOffset: -13,     // Back wall position
-  roomWidth: 25,       // Width of the room (X-axis)
-  roomDepth: 17        // Depth of the room (Z-axis)
+  wallHeight: 12,
+  floorLevel: -3,
+  wallOffset: -13,
+  roomWidth: 25,
+  roomDepth: 17
 };
 
 const MOVEMENT_CONFIG = {
   walkSpeed: 0.15,
   runSpeed: 0.3,
-  playerHeight: 2     // Height of player camera from ground
+  playerHeight: 2,
+  mouseSensitivity: 0.002 // Add mouse sensitivity setting
 };
+
+let cameraPitch = 0;
+let cameraYaw = 0;
 
 // ---- SCENE SETUP ----
 const scene = new THREE.Scene();
@@ -45,8 +48,10 @@ const moveState = {
   running: false
 };
 
+
 const playerState = {
-  insideRoom: false
+  insideRoom: false,
+  pointerLocked: false // Track if pointer is locked
 };
 
 // Camera setup
@@ -73,17 +78,77 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
-// Camera controls
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.05;
-controls.enableZoom = false;
-controls.enablePan = false;
-controls.enableRotate = true;
-controls.minPolarAngle = 0.1;
-controls.maxPolarAngle = Math.PI - 0.1;
-controls.target.copy(doorPosition);
-controls.update();
+// Remove OrbitControls setup and add instructions
+const instructions = document.createElement('div');
+instructions.style.position = 'absolute';
+instructions.style.top = '10px';
+instructions.style.width = '100%';
+instructions.style.textAlign = 'center';
+instructions.style.color = '#ffffff';
+instructions.style.fontFamily = 'Arial, sans-serif';
+instructions.style.fontSize = '14px';
+instructions.style.padding = '10px';
+instructions.style.backgroundColor = 'rgba(0,0,0,0.5)';
+instructions.style.zIndex = '100';
+instructions.innerHTML = 'Click to start<br>WASD = Move, SHIFT = Run, Mouse = Look';
+document.body.appendChild(instructions);
+
+// ---- FIRST PERSON CONTROLS ----
+// Set up pointer lock API
+const element = document.body;
+
+// Initial pointer lock request
+renderer.domElement.addEventListener('click', () => {
+  if (!playerState.pointerLocked) {
+    element.requestPointerLock = element.requestPointerLock || 
+                                element.mozRequestPointerLock ||
+                                element.webkitRequestPointerLock;
+    element.requestPointerLock();
+  }
+});
+
+// Pointer lock change event listener
+document.addEventListener('pointerlockchange', pointerLockChange, false);
+document.addEventListener('mozpointerlockchange', pointerLockChange, false);
+document.addEventListener('webkitpointerlockchange', pointerLockChange, false);
+
+function pointerLockChange() {
+  if (document.pointerLockElement === element || 
+      document.mozPointerLockElement === element || 
+      document.webkitPointerLockElement === element) {
+    // Pointer is locked
+    playerState.pointerLocked = true;
+    instructions.style.display = 'none';
+    document.addEventListener('mousemove', onMouseMove, false);
+  } else {
+    // Pointer is unlocked
+    playerState.pointerLocked = false;
+    instructions.style.display = 'block';
+    document.removeEventListener('mousemove', onMouseMove, false);
+  }
+}
+
+// Mouse movement handler for first-person camera
+function onMouseMove(event) {
+  if (!playerState.pointerLocked) return;
+  
+  const movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+  const movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+  
+  // Update yaw (left/right rotation)
+  cameraYaw -= movementX * MOVEMENT_CONFIG.mouseSensitivity;
+  
+  // Update pitch (up/down rotation)
+  cameraPitch -= movementY * MOVEMENT_CONFIG.mouseSensitivity;
+  
+  // Limit the pitch rotation to avoid flipping
+  cameraPitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, cameraPitch));
+  
+  // Apply rotation to camera using quaternions with proper order
+  const euler = new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ');
+  camera.quaternion.setFromEuler(euler);
+}
+
 
 // Performance stats
 const stats = new Stats();
@@ -126,17 +191,16 @@ function handleKeyUp(event) {
 function updateMovement() {
   const speed = moveState.running ? MOVEMENT_CONFIG.runSpeed : MOVEMENT_CONFIG.walkSpeed;
   
-  // Get camera direction vectors
-  const direction = new THREE.Vector3();
-  camera.getWorldDirection(direction);
-  
-  // Make direction vector horizontal (no flying up/down)
-  direction.y = 0;
+  // Get camera direction vectors for first-person movement
+  const direction = new THREE.Vector3(0, 0, -1);
+  direction.applyQuaternion(camera.quaternion);
+  direction.y = 0; // Keep horizontal
   direction.normalize();
   
   // Calculate the right vector (perpendicular to forward direction)
-  const right = new THREE.Vector3();
-  right.crossVectors(new THREE.Vector3(0, 1, 0), direction).normalize();
+  const right = new THREE.Vector3(1, 0, 0);
+  right.applyQuaternion(camera.quaternion);
+  right.normalize();
   
   // Calculate movement vector
   const movement = new THREE.Vector3(0, 0, 0);
@@ -184,7 +248,6 @@ function animate() {
   requestAnimationFrame(animate);
   
   updateMovement();
-  controls.update();
   
   // Animate clouds 
   if (sceneClouds) {
@@ -197,6 +260,16 @@ function animate() {
 
 // ---- INITIALIZE ----
 async function init() {
+
+  // Initialize camera angles based on initial look direction
+  const initialDirection = new THREE.Vector3().subVectors(doorPosition, camera.position).normalize();
+  cameraYaw = Math.atan2(-initialDirection.x, -initialDirection.z);
+  cameraPitch = Math.asin(initialDirection.y);
+
+  // Apply initial rotation
+  const euler = new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ');
+  camera.quaternion.setFromEuler(euler);
+
   // Create path to room entrance
   const entrancePath = createPathToEntrance(scene, {
     startPosition: new THREE.Vector3(0, -3.1, doorZ + 25),
