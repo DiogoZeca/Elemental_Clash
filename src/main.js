@@ -25,7 +25,21 @@ const MOVEMENT_CONFIG = {
   walkSpeed: 0.15,
   runSpeed: 0.3,
   playerHeight: 2,
-  mouseSensitivity: 0.002 // Add mouse sensitivity setting
+  mouseSensitivity: 0.002
+};
+
+// Calculate door position first
+const doorZ = SCENE_CONFIG.wallOffset + SCENE_CONFIG.roomDepth;
+
+// Get the ground size from your createOutsideScenery options
+const GROUND_SIZE = 150;
+
+// Now use doorZ in BOUNDARY_CONFIG
+const BOUNDARY_CONFIG = {
+  minX: -GROUND_SIZE/2,    // Left boundary aligned with ground edge
+  maxX: GROUND_SIZE/2,     // Right boundary aligned with ground edge
+  minZ: -GROUND_SIZE/2,    // Back boundary aligned with ground edge
+  maxZ: Math.max(doorZ + 30, GROUND_SIZE/2)  // Front boundary (either 30 units past the door or ground edge, whichever is further)
 };
 
 let cameraPitch = 0;
@@ -48,10 +62,9 @@ const moveState = {
   running: false
 };
 
-
 const playerState = {
   insideRoom: false,
-  pointerLocked: false // Track if pointer is locked
+  pointerLocked: false
 };
 
 // Camera setup
@@ -62,8 +75,6 @@ const camera = new THREE.PerspectiveCamera(
   1000
 );
 
-// Calculate the door position from scene configuration
-const doorZ = SCENE_CONFIG.wallOffset + SCENE_CONFIG.roomDepth;
 const doorPosition = new THREE.Vector3(0, MOVEMENT_CONFIG.playerHeight, doorZ);
 
 // Position player OUTSIDE the room, facing TOWARD the door
@@ -78,7 +89,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
-// Remove OrbitControls setup and add instructions
+// Instructions element
 const instructions = document.createElement('div');
 instructions.style.position = 'absolute';
 instructions.style.top = '10px';
@@ -94,10 +105,8 @@ instructions.innerHTML = 'Click to start<br>WASD = Move, SHIFT = Run, Mouse = Lo
 document.body.appendChild(instructions);
 
 // ---- FIRST PERSON CONTROLS ----
-// Set up pointer lock API
 const element = document.body;
 
-// Initial pointer lock request
 renderer.domElement.addEventListener('click', () => {
   if (!playerState.pointerLocked) {
     element.requestPointerLock = element.requestPointerLock || 
@@ -107,7 +116,6 @@ renderer.domElement.addEventListener('click', () => {
   }
 });
 
-// Pointer lock change event listener
 document.addEventListener('pointerlockchange', pointerLockChange, false);
 document.addEventListener('mozpointerlockchange', pointerLockChange, false);
 document.addEventListener('webkitpointerlockchange', pointerLockChange, false);
@@ -150,6 +158,7 @@ function onMouseMove(event) {
 }
 
 
+
 // Performance stats
 const stats = new Stats();
 document.body.appendChild(stats.dom);
@@ -188,6 +197,7 @@ function handleKeyUp(event) {
   }
 }
 
+// Update your updateMovement function with boundary checking
 function updateMovement() {
   const speed = moveState.running ? MOVEMENT_CONFIG.runSpeed : MOVEMENT_CONFIG.walkSpeed;
   
@@ -211,14 +221,55 @@ function updateMovement() {
   if (moveState.left) movement.addScaledVector(right, -speed);
   if (moveState.right) movement.addScaledVector(right, speed);
   
-  // Apply the combined movement
-  camera.position.add(movement);
+  // Calculate new position
+  const newPosition = camera.position.clone().add(movement);
+  
+  // Check boundaries before applying movement
+  if (isWithinBoundaries(newPosition)) {
+    camera.position.copy(newPosition);
+  } else {
+    // Optional: Allow sliding along boundaries instead of stopping completely
+    const slideMovement = calculateSlideMovement(movement, camera.position);
+    if (slideMovement) {
+      camera.position.add(slideMovement);
+    }
+  }
   
   // Keep player at correct height
   camera.position.y = MOVEMENT_CONFIG.playerHeight;
   
   // Check if player has entered the room
   checkRoomEntry();
+}
+
+// Function to check if position is within boundaries
+function isWithinBoundaries(position) {
+  return (
+    position.x >= BOUNDARY_CONFIG.minX &&
+    position.x <= BOUNDARY_CONFIG.maxX &&
+    position.z >= BOUNDARY_CONFIG.minZ &&
+    position.z <= BOUNDARY_CONFIG.maxZ
+  );
+}
+
+// Function to calculate sliding along boundaries
+function calculateSlideMovement(movement, currentPosition) {
+  // Create a sliding movement that keeps the component that doesn't violate boundaries
+  const slideMovement = new THREE.Vector3();
+  
+  // Try to slide in X direction
+  const newPosX = currentPosition.clone().add(new THREE.Vector3(movement.x, 0, 0));
+  if (isWithinBoundaries(newPosX)) {
+    slideMovement.x = movement.x;
+  }
+  
+  // Try to slide in Z direction
+  const newPosZ = currentPosition.clone().add(new THREE.Vector3(0, 0, movement.z));
+  if (isWithinBoundaries(newPosZ)) {
+    slideMovement.z = movement.z;
+  }
+  
+  return slideMovement.length() > 0 ? slideMovement : null;
 }
 
 // ---- GAME STATE FUNCTIONS ----
