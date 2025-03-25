@@ -158,10 +158,13 @@ export async function createOutsideScenery(scene, options = {}) {
     // Create dark ground
     const groundGeometry = new THREE.PlaneGeometry(config.groundSize, config.groundSize);
     const groundMaterial = new THREE.MeshStandardMaterial({ 
-      color: 0x0a1f15,  // Very dark green for night ground
+      color: 0x1a2f25,  // Brighter than original 0x0a1f15 but still dark
       roughness: 0.9, 
-      metalness: 0.1
+      metalness: 0.1,
+      emissive: 0x110a0a,  // Slight red emissive glow
+      emissiveIntensity: 0.2
     });
+
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotation.x = -Math.PI / 2; // Horizontal
     ground.position.y = -3.2; // Slightly below the indoor floor
@@ -174,14 +177,14 @@ export async function createOutsideScenery(scene, options = {}) {
     
     // Create dark night sky
     for (let i = 0; i < 6; i++) {
-      // Different sides of the skybox can have subtle color variations
+      // Different sides of the skybox with brighter variants
       let color;
       if (i === 4) { // Top side
-        color = 0x0a0a1a; // Very dark blue-black
+        color = 0x2a1515; // Brighter than 0x1a0a0a but still dark
       } else if (i === 5) { // Bottom side
-        color = 0x050510; // Almost black
+        color = 0x1a0a0a; // Brighter than 0x100505
       } else { // Other sides
-        color = 0x07071a; // Very dark blue
+        color = 0x2a1010; // Brighter than 0x1a0707
       }
       
       skyMaterials.push(new THREE.MeshBasicMaterial({
@@ -231,24 +234,24 @@ export async function createOutsideScenery(scene, options = {}) {
  * @returns {Object} - The moon mesh and its light
  */
 function createMoon(scene) {
-    const moonGeometry = new THREE.SphereGeometry(8, 32, 32);
-    const moonMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffffdd,
-      emissive: 0xffffcc,
-      emissiveIntensity: 0.9,
-      roughness: 0.5
-    });
-  
-    const moon = new THREE.Mesh(moonGeometry, moonMaterial);
-  
+  const moonGeometry = new THREE.SphereGeometry(8, 32, 32);
+  const moonMaterial = new THREE.MeshStandardMaterial({
+    color: 0xff3333,           // Red moon base color
+    emissive: 0xff4444,        // Brighter red emissive glow (brightened from 0xbb2222)
+    emissiveIntensity: 1.5,    // Increased from 1.2 for stronger glow
+    roughness: 0.5             // Reduced from 0.6 for more reflectivity
+  });
+
+  const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+
   // Position the moon in the night sky
   moon.position.set(40, 60, -100);
-  
-  // Add a light source from the moon - use a directional light for better shadows
-  const moonLight = new THREE.DirectionalLight(0xc9e6ff, 1.0);
+
+  // Add a light source from the moon - use a directional light with red tint
+  const moonLight = new THREE.DirectionalLight(0xff4444, 0.8); // Reduced from 1.5
   moonLight.position.copy(moon.position);
-  moonLight.target.position.set(0, 0, 0); // Make it point at the center of the scene
-  
+  moonLight.target.position.set(0, 0, 0);
+
   // Setup for shadow casting
   moonLight.castShadow = true;
   moonLight.shadow.mapSize.width = 2048;
@@ -260,20 +263,63 @@ function createMoon(scene) {
   moonLight.shadow.camera.top = 50;
   moonLight.shadow.camera.bottom = -50;
   moonLight.shadow.bias = -0.0005;
-
     
-  // Add a soft point light at the moon's position for local illumination
-  const moonGlow = new THREE.PointLight(0xd8e7ff, 0.8, 200);
+  // Add a soft red point light for the moon's glow - increased intensity and range
+  const moonGlow = new THREE.PointLight(0xff5555, 1.8, 250);  // Increased intensity from 1.2 to 1.8
   moonGlow.position.copy(moon.position);
+
+  // Add a secondary ambient light to brighten the scene
+  const redAmbient = new THREE.HemisphereLight(0xff3333, 0x331111, 0.5);
+  scene.add(redAmbient);
   
   scene.add(moon);
   scene.add(moonLight);
   scene.add(moonLight.target);
   scene.add(moonGlow);
-  
-  return { moon, moonLight, moonGlow };
 
+  return { moon, moonLight, moonGlow, redAmbient };
 }
+
+/**
+ * Animates the moon movement across the sky in a back-and-forth pattern
+ * @param {Object} moon - The moon object from createMoon function
+ * @param {number} time - Current timestamp for animation (optional)
+ */
+export function animateMoon(moonObject, time = Date.now()) {
+  if (!moonObject || !moonObject.moon) return;
+  
+  // Make the cycle faster - 2 minutes instead of 10
+  const cycle = 120000; 
+  const t = (time % cycle) / cycle;
+  
+  const oscillation = Math.sin(t * Math.PI * 2);
+  
+  // Keep the same radius but make height variation more dramatic
+  const radius = 150;
+  const x = oscillation * radius;
+  const z = -100;
+  
+  // Increase height variation to make it more noticeable
+  const heightVariation = 30 * (1 - (oscillation * oscillation));
+  const y = 60 + heightVariation;
+  
+  // Update positions
+  moonObject.moon.position.set(x, y, z);
+  
+  if (moonObject.moonLight) {
+    moonObject.moonLight.position.copy(moonObject.moon.position);
+  }
+  
+  if (moonObject.moonGlow) {
+    moonObject.moonGlow.position.copy(moonObject.moon.position);
+  }
+  
+  if (moonObject.moonLight && moonObject.moonLight.target) {
+    moonObject.moonLight.target.position.set(x * 0.3, 0, z * 0.3);
+  }
+}
+
+
 
 /**
  * Creates stars in the night sky
