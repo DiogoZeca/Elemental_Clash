@@ -295,7 +295,8 @@ export async function createWallEnvironment(scene, options = {}) {
       wallOffset: options.wallOffset || -10,
       floorLevel: options.floorLevel || -3,
       useConcrete: options.useConcrete || true,
-      includeFrontWall: options.includeFrontWall || true
+      includeFrontWall: options.includeFrontWall || true,
+      invisibleWalls: options.invisibleWalls || false
     };
     
     // Get appropriate material

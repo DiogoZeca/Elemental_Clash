@@ -4,7 +4,7 @@ export const SCENE_CONFIG = {
     wallOffset: -13,
     roomWidth: 25,
     roomDepth: 17
-  };
+};
   
   export const MOVEMENT_CONFIG = {
     walkSpeed: 0.15,
@@ -17,15 +17,15 @@ export const SCENE_CONFIG = {
   export const doorZ = SCENE_CONFIG.wallOffset + SCENE_CONFIG.roomDepth;
   
   // Ground size
-  export const GROUND_SIZE = 150;
+  export const GROUND_SIZE = 100;
   
   // Outer boundary configuration
   export const BOUNDARY_CONFIG = {
     minX: -GROUND_SIZE/2,
     maxX: GROUND_SIZE/2,
     minZ: -GROUND_SIZE/2,
-    maxZ: Math.max(doorZ + 30, GROUND_SIZE/2)
-  };
+    maxZ: GROUND_SIZE/2  
+};
   
   // Wall boundary configuration
   export const WALL_CONFIG = {
