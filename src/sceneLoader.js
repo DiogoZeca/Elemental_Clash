@@ -36,55 +36,7 @@ function loadTexture(path, options = {}) {
 }
 
 /**
- * Loads the new metal textures (Metal023)
- * @returns {Promise<Object>} The loaded textures
- */
-function loadMetalTextures() {
-  const basePath = 'models/textures/Metal023_4K-PNG/';
-  
-  return Promise.all([
-    loadTexture(`${basePath}Metal023_4K-PNG_Color.png`, { repeat: [3, 3] }),
-    loadTexture(`${basePath}Metal023_4K-PNG_NormalGL.png`, { repeat: [3, 3] }),
-    loadTexture(`${basePath}Metal023_4K-PNG_Roughness.png`, { repeat: [3, 3] }),
-    loadTexture(`${basePath}Metal023_4K-PNG_Metalness.png`, { repeat: [3, 3] }),
-    loadTexture(`${basePath}Metal023_4K-PNG_Displacement.png`, { repeat: [3, 3] }),
-  ]).then(([color, normal, roughness, metalness, displacement]) => {
-    return {
-      color,
-      normal,
-      roughness,
-      metalness,
-      displacement
-    };
-  });
-}
-
-/**
- * Loads the concrete textures (Concrete033)
- * @returns {Promise<Object>} The loaded textures
- */
-function loadConcreteTextures() {
-  const basePath = 'models/textures/Concrete033_4K-PNG/';
-  
-  return Promise.all([
-    loadTexture(`${basePath}Concrete033_4K-PNG_Color.png`, { repeat: [2, 2] }),
-    loadTexture(`${basePath}Concrete033_4K-PNG_NormalGL.png`, { repeat: [2, 2] }),
-    loadTexture(`${basePath}Concrete033_4K-PNG_Roughness.png`, { repeat: [2, 2] }),
-    loadTexture(`${basePath}Concrete033_4K-PNG_AmbientOcclusion.png`, { repeat: [2, 2] }),
-    loadTexture(`${basePath}Concrete033_4K-PNG_Displacement.png`, { repeat: [2, 2] }),
-  ]).then(([color, normal, roughness, ao, displacement]) => {
-    return {
-      color,
-      normal,
-      roughness,
-      ao,
-      displacement
-    };
-  });
-}
-
-/**
- * Loads the tile textures (Tiles133D)
+ * Loads the tiles textures (Tiles133D)
  * @returns {Promise<Object>} The loaded textures
  */
 function loadTilesTextures() {
@@ -104,27 +56,6 @@ function loadTilesTextures() {
       ao,
       displacement
     };
-  });
-}
-
-/**
- * Creates a PBR material using concrete textures
- * @returns {Promise<THREE.MeshStandardMaterial>} The created material
- */
-function createConcreteMaterial() {
-  return loadConcreteTextures().then(textures => {
-    const material = new THREE.MeshStandardMaterial({
-      map: textures.color,
-      normalMap: textures.normal,
-      roughnessMap: textures.roughness,
-      aoMap: textures.ao,
-      displacementMap: textures.displacement,
-      displacementScale: 0.1,
-      roughness: 1.0,
-      metalness: 0.0
-    });
-    
-    return material;
   });
 }
 
@@ -150,23 +81,26 @@ function createTilesMaterial() {
 }
 
 /**
- * Creates a PBR material using new metal textures
- * @returns {Promise<THREE.MeshStandardMaterial>} The created material
+ * Creates a fallback material for metal surfaces
+ * @returns {THREE.MeshStandardMaterial} The created material
  */
-function createMetalMaterial() {
-  return loadMetalTextures().then(textures => {
-    const material = new THREE.MeshStandardMaterial({
-      map: textures.color,
-      normalMap: textures.normal,
-      roughnessMap: textures.roughness,
-      metalnessMap: textures.metalness,
-      displacementMap: textures.displacement,
-      displacementScale: 0.05,
-      metalness: 0.9,
-      roughness: 0.4
-    });
-    
-    return material;
+function createFallbackMetalMaterial() {
+  return new THREE.MeshStandardMaterial({ 
+    color: 0x888899,
+    roughness: 0.4,
+    metalness: 0.9
+  });
+}
+
+/**
+ * Creates a fallback material for concrete surfaces
+ * @returns {THREE.MeshStandardMaterial} The created material
+ */
+function createFallbackConcreteMaterial() {
+  return new THREE.MeshStandardMaterial({ 
+    color: 0x554433,
+    roughness: 0.75,
+    metalness: 0.2
   });
 }
 
@@ -225,7 +159,7 @@ export async function createTilesFloor(scene, options = {}) {
 }
 
 /**
- * Creates a ceiling with metal texture that aligns with the walls
+ * Creates a ceiling with a simple metal-like material
  * @param {THREE.Scene} scene - The scene to add the ceiling to
  * @param {Object} options - Configuration options
  * @returns {Promise<THREE.Mesh>} - The created ceiling
@@ -243,14 +177,8 @@ export async function createMetalCeiling(scene, options = {}) {
       wallOffset: options.wallOffset || -10
     };
     
-    // Get appropriate material
-    let ceilingMaterial;
-    try {
-      ceilingMaterial = await createMetalMaterial();
-    } catch (error) {
-      console.error('Failed to load metal ceiling material:', error);
-      ceilingMaterial = new THREE.MeshStandardMaterial({ color: 0x777777 });
-    }
+    // Use fallback metal material since we don't have metal textures
+    const ceilingMaterial = createFallbackMetalMaterial();
     
     // Create ceiling mesh
     const ceilingGeometry = new THREE.PlaneGeometry(config.width, config.depth);
@@ -277,7 +205,7 @@ export async function createMetalCeiling(scene, options = {}) {
 }
 
 /**
- * Creates a 3-wall environment with concrete or metal texture
+ * Creates a 3-wall environment with concrete-like material
  * @param {THREE.Scene} scene - The scene to add walls to
  * @param {Object} options - Wall configuration options
  * @returns {Promise<Object>} - References to created walls
@@ -294,34 +222,12 @@ export async function createWallEnvironment(scene, options = {}) {
       wallDepth: options.wallDepth || 0.2,
       wallOffset: options.wallOffset || -10,
       floorLevel: options.floorLevel || -3,
-      useConcrete: options.useConcrete || true,
       includeFrontWall: options.includeFrontWall || true,
       invisibleWalls: options.invisibleWalls || false
     };
     
-    // Get appropriate material
-    let wallMaterial;
-    try {
-      if (config.useConcrete) {
-        wallMaterial = await createConcreteMaterial();
-        console.log('Using concrete material for walls');
-      } else {
-        // Fallback to basic material
-        wallMaterial = new THREE.MeshStandardMaterial({ 
-          color: 0x554433,
-          roughness: 0.75,
-          metalness: 0.2
-        });
-        console.log('Using basic material for walls');
-      }
-    } catch (error) {
-      console.error('Failed to load wall material:', error);
-      wallMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x554433,
-        roughness: 0.75,
-        metalness: 0.2
-      });
-    }
+    // Use fallback concrete material since we don't have concrete textures
+    const wallMaterial = createFallbackConcreteMaterial();
     
     // 1. BACK WALL
     const backWallGeometry = new THREE.BoxGeometry(
