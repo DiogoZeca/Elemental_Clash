@@ -175,24 +175,24 @@ export async function createOutsideScenery(scene, options = {}) {
     const skyGeometry = new THREE.BoxGeometry(config.skyboxSize, config.skyboxSize, config.skyboxSize);
     const skyMaterials = [];
     
-    // Create dark night sky
+  // Create a brighter night sky
     for (let i = 0; i < 6; i++) {
       // Different sides of the skybox with brighter variants
       let color;
       if (i === 4) { // Top side
-        color = 0x2a1515; // Brighter than 0x1a0a0a but still dark
+        color = 0x4a3535; // Much brighter than before
       } else if (i === 5) { // Bottom side
-        color = 0x1a0a0a; // Brighter than 0x100505
+        color = 0x3a2a2a; // Brighter than before
       } else { // Other sides
-        color = 0x2a1010; // Brighter than 0x1a0707
+        color = 0x4a3030; // Brighter than before
       }
-      
+          
       skyMaterials.push(new THREE.MeshBasicMaterial({
         color: color,
         side: THREE.BackSide
       }));
     }
-    
+
     const skybox = new THREE.Mesh(skyGeometry, skyMaterials);
     scene.add(skybox);
     
@@ -236,10 +236,10 @@ export async function createOutsideScenery(scene, options = {}) {
 function createMoon(scene) {
   const moonGeometry = new THREE.SphereGeometry(8, 32, 32);
   const moonMaterial = new THREE.MeshStandardMaterial({
-    color: 0xff3333,           // Red moon base color
-    emissive: 0xff4444,        // Brighter red emissive glow (brightened from 0xbb2222)
-    emissiveIntensity: 1.5,    // Increased from 1.2 for stronger glow
-    roughness: 0.5             // Reduced from 0.6 for more reflectivity
+    color: 0xff6666,           // Lighter red moon base color
+    emissive: 0xff7777,        // Brighter red emissive glow
+    emissiveIntensity: 2.0,    // Increased from 1.5 for stronger glow
+    roughness: 0.4             // Reduced for more reflectivity
   });
 
   const moon = new THREE.Mesh(moonGeometry, moonMaterial);
@@ -248,7 +248,7 @@ function createMoon(scene) {
   moon.position.set(40, 60, -100);
 
   // Add a light source from the moon - use a directional light with red tint
-  const moonLight = new THREE.DirectionalLight(0xff4444, 0.8); // Reduced from 1.5
+  const moonLight = new THREE.DirectionalLight(0xff4444, 1.2); // Reduced from 1.5
   moonLight.position.copy(moon.position);
   moonLight.target.position.set(0, 0, 0);
 
@@ -265,11 +265,11 @@ function createMoon(scene) {
   moonLight.shadow.bias = -0.0005;
     
   // Add a soft red point light for the moon's glow - increased intensity and range
-  const moonGlow = new THREE.PointLight(0xff5555, 1.8, 250);  // Increased intensity from 1.2 to 1.8
+  const moonGlow = new THREE.PointLight(0xff5555, 2.5, 300);  // Increased intensity from 1.2 to 1.8
   moonGlow.position.copy(moon.position);
 
   // Add a secondary ambient light to brighten the scene
-  const redAmbient = new THREE.HemisphereLight(0xff3333, 0x331111, 0.5);
+  const redAmbient = new THREE.HemisphereLight(0xff3333, 0x665555, 0.8);
   scene.add(redAmbient);
   
   scene.add(moon);
