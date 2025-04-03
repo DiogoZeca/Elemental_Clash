@@ -2,8 +2,8 @@ export const SCENE_CONFIG = {
     wallHeight: 12,
     floorLevel: -3,
     wallOffset: -13,
-    roomWidth: 25,
-    roomDepth: 17
+    roomWidth: 35,
+    roomDepth: 25
 };
   
   export const MOVEMENT_CONFIG = {

@@ -204,6 +204,108 @@ export async function createMetalCeiling(scene, options = {}) {
   }
 }
 
+
+export function createTable(scene, options = {}) {
+  console.log('Creating table...');
+  
+  // Default options with bigger dimensions
+  const config = {
+    width: options.width || 10,
+    depth: options.depth || 7,
+    height: options.height || 3,
+    positionX: options.positionX || 0,
+    positionZ: options.positionZ || -5,
+    floorLevel: options.floorLevel || -3,
+    woodColor: options.woodColor || 0x5c3a21,
+    legThickness: options.legThickness || 0.4
+  };
+  
+  // Create a group to hold all table parts
+  const tableGroup = new THREE.Group();
+  
+  // Create table top
+  const tableTopGeometry = new THREE.BoxGeometry(
+    config.width, 
+    0.3, // Top thickness - increased 
+    config.depth
+  );
+  
+  // Create wood material with slight texture and shine
+  const woodMaterial = new THREE.MeshStandardMaterial({
+    color: config.woodColor,
+    roughness: 0.7,
+    metalness: 0.2,
+    bumpScale: 0.02
+  });
+  
+  // Create table top
+  const tableTop = new THREE.Mesh(tableTopGeometry, woodMaterial);
+  tableTop.position.set(
+    config.positionX,
+    config.floorLevel + config.height,
+    config.positionZ
+  );
+  tableTop.castShadow = true;
+  tableTop.receiveShadow = true;
+  tableGroup.add(tableTop);
+  
+  // Create table legs (4 legs at corners)
+  const legPositions = [
+    // Front left
+    {x: config.positionX - config.width/2 + config.legThickness/2, 
+     z: config.positionZ - config.depth/2 + config.legThickness/2},
+    // Front right
+    {x: config.positionX + config.width/2 - config.legThickness/2, 
+     z: config.positionZ - config.depth/2 + config.legThickness/2},
+    // Back left
+    {x: config.positionX - config.width/2 + config.legThickness/2, 
+     z: config.positionZ + config.depth/2 - config.legThickness/2},
+    // Back right
+    {x: config.positionX + config.width/2 - config.legThickness/2, 
+     z: config.positionZ + config.depth/2 - config.legThickness/2}
+  ];
+  
+  // Create each leg
+  legPositions.forEach(pos => {
+    const legGeometry = new THREE.BoxGeometry(
+      config.legThickness,
+      config.height,
+      config.legThickness
+    );
+    
+    const leg = new THREE.Mesh(legGeometry, woodMaterial);
+    leg.position.set(
+      pos.x,
+      config.floorLevel + config.height/2,
+      pos.z
+    );
+    leg.castShadow = true;
+    leg.receiveShadow = true;
+    tableGroup.add(leg);
+  });
+  
+  // Add a subtle highlight to the table top
+  const highlight = new THREE.DirectionalLight(0xffffaa, 0.4);
+  highlight.position.set(0, 5, 0);
+  highlight.target = tableTop;
+  tableGroup.add(highlight);
+  
+  // Store collision boundaries in userData for physics
+  tableGroup.userData.collision = {
+    minX: config.positionX - config.width/2,
+    maxX: config.positionX + config.width/2,
+    minZ: config.positionZ - config.depth/2,
+    maxZ: config.positionZ + config.depth/2
+  };
+  
+  // Add the table group to the scene
+  scene.add(tableGroup);
+  
+  console.log('Table created successfully');
+  return tableGroup;
+}
+
+
 /**
  * Creates a 3-wall environment with concrete-like material
  * @param {THREE.Scene} scene - The scene to add walls to

@@ -136,18 +136,35 @@ export function updateMovement(camera) {
   if (moveState.left) movement.addScaledVector(right, -speed);
   if (moveState.right) movement.addScaledVector(right, speed);
   
+  // If not moving, skip collision checks
+  if (movement.length() === 0) return;
+  
   // Calculate new position
   const newPosition = camera.position.clone().add(movement);
   
   // Check boundaries before applying movement
   if (isWithinBoundaries(newPosition)) {
+    // Direct movement is possible
     camera.position.copy(newPosition);
   } else {
-    // Optional: Allow sliding along boundaries instead of stopping completely
-    const slideMovement = calculateSlideMovement(movement, camera.position);
-    if (slideMovement) {
-      camera.position.add(slideMovement);
+    // Try separate X and Z movement to allow sliding along walls
+    const xMovement = new THREE.Vector3(movement.x, 0, 0);
+    const zMovement = new THREE.Vector3(0, 0, movement.z);
+    
+    const xPosition = camera.position.clone().add(xMovement);
+    const zPosition = camera.position.clone().add(zMovement);
+    
+    // Check if we can move along X axis
+    if (isWithinBoundaries(xPosition)) {
+      camera.position.copy(xPosition);
     }
+    
+    // Check if we can move along Z axis
+    if (isWithinBoundaries(zPosition)) {
+      camera.position.copy(zPosition);
+    }
+    
+    // If neither worked, we stay in place
   }
   
   // Keep player at correct height

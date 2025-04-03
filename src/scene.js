@@ -1,85 +1,184 @@
 import * as THREE from 'three';
 import { SCENE_CONFIG, doorZ } from './config.js';
-import { createWallEnvironment, createMetalCeiling, createTilesFloor } from './sceneLoader.js';
+import { createWallEnvironment, createMetalCeiling, createTilesFloor, createTable } from './sceneLoader.js';
 import { createOutsideScenery, addClouds, createPathToEntrance } from './outsidescenery.js';
 import { sceneObjects } from './gameState.js';
+import { setTableReference } from './physics.js';
 
 export async function setupScene(scene) {
   try {
+    console.log('Starting scene initialization...');
+    
     // Create path to entrance
     const path = createPathToEntrance(scene, {
       startPosition: new THREE.Vector3(0, -3.1, doorZ + 25),
       endPosition: new THREE.Vector3(0, -3.1, doorZ),
       width: 3.5
     });
+    console.log('Path created successfully');
   
-    // Load all scene elements in parallel with proper error handling
-    const [walls, floor, ceiling, outside] = await Promise.all([
-      createWallEnvironment(scene, {
-        wallHeight: SCENE_CONFIG.wallHeight,  
-        floorLevel: SCENE_CONFIG.floorLevel,
-        wallOffset: SCENE_CONFIG.wallOffset,
-        backWallWidth: SCENE_CONFIG.roomWidth,
-        sideWallLength: SCENE_CONFIG.roomDepth,
-        useConcrete: true,
-        includeFrontWall: true,
-        invisibleWalls: true
-      }).catch(err => {
-        console.error('Failed to create walls:', err);
-        return null;
-      }),
-      
-      createTilesFloor(scene, {
-        width: SCENE_CONFIG.roomWidth,
-        depth: SCENE_CONFIG.roomDepth,
-        floorLevel: SCENE_CONFIG.floorLevel,
-        wallOffset: SCENE_CONFIG.wallOffset
-      }).catch(err => {
-        console.error('Failed to create floor:', err);
-        return null;
-      }),
-      
-      createMetalCeiling(scene, {
-        width: SCENE_CONFIG.roomWidth,
-        depth: SCENE_CONFIG.roomDepth,
-        floorLevel: SCENE_CONFIG.floorLevel,
-        wallOffset: SCENE_CONFIG.wallOffset
-      }).catch(err => {
-        console.error('Failed to create ceiling:', err);
-        return null;
-      }),
-      
-      createOutsideScenery(scene).catch(err => {
-        console.error('Failed to create outside scenery:', err);
-        return null;
-      })
-    ]);
+    // Load wall environment first
+    const walls = await createWallEnvironment(scene, {
+      wallHeight: SCENE_CONFIG.wallHeight,  
+      floorLevel: SCENE_CONFIG.floorLevel,
+      wallOffset: SCENE_CONFIG.wallOffset,
+      backWallWidth: SCENE_CONFIG.roomWidth,
+      sideWallLength: SCENE_CONFIG.roomDepth,
+      useConcrete: true,
+      includeFrontWall: true,
+      invisibleWalls: true
+    }).catch(err => {
+      console.error('Failed to create walls:', err);
+      return null;
+    });
+    console.log('Walls created successfully');
     
-    // Store outside elements for animation with explicit logging
+    // Load floor
+    const floor = await createTilesFloor(scene, {
+      width: SCENE_CONFIG.roomWidth,
+      depth: SCENE_CONFIG.roomDepth,
+      floorLevel: SCENE_CONFIG.floorLevel,
+      wallOffset: SCENE_CONFIG.wallOffset
+    }).catch(err => {
+      console.error('Failed to create floor:', err);
+      return null;
+    });
+    console.log('Floor created successfully');
+    
+    // Load ceiling
+    const ceiling = await createMetalCeiling(scene, {
+      width: SCENE_CONFIG.roomWidth,
+      depth: SCENE_CONFIG.roomDepth,
+      floorLevel: SCENE_CONFIG.floorLevel,
+      wallOffset: SCENE_CONFIG.wallOffset
+    }).catch(err => {
+      console.error('Failed to create ceiling:', err);
+      return null;
+    });
+    console.log('Ceiling created successfully');
+    
+    // Load outside scenery
+    const outside = await createOutsideScenery(scene, {
+      groundSize: 150,
+      skyboxEnabled: false
+    }).catch(err => {
+      console.error('Failed to create outside scenery:', err);
+      return null;
+    });
+    console.log('Outside scenery created successfully');
+    
+    // Create table WITHOUT light to avoid potential issues
+    let table = null;
+    try {
+      // Create a simplified version of the table
+      table = new THREE.Group();
+      
+      const config = {
+        width: 10,
+        depth: 7,
+        height: 3,
+        positionX: 0,
+        positionZ: SCENE_CONFIG.wallOffset + SCENE_CONFIG.roomDepth * 0.5,
+        floorLevel: SCENE_CONFIG.floorLevel,
+        woodColor: 0x5c3a21,
+        legThickness: 0.4
+      };
+      
+      // Create wood material
+      const woodMaterial = new THREE.MeshStandardMaterial({
+        color: config.woodColor,
+        roughness: 0.7,
+        metalness: 0.2
+      });
+      
+      // Create table top
+      const tableTopGeometry = new THREE.BoxGeometry(
+        config.width, 
+        0.3,
+        config.depth
+      );
+      const tableTop = new THREE.Mesh(tableTopGeometry, woodMaterial);
+      tableTop.position.set(
+        config.positionX,
+        config.floorLevel + config.height,
+        config.positionZ
+      );
+      tableTop.castShadow = true;
+      tableTop.receiveShadow = true;
+      table.add(tableTop);
+      
+      // Create table legs (4 legs at corners)
+      const legPositions = [
+        // Front left
+        {x: config.positionX - config.width/2 + config.legThickness/2, 
+        z: config.positionZ - config.depth/2 + config.legThickness/2},
+        // Front right
+        {x: config.positionX + config.width/2 - config.legThickness/2, 
+        z: config.positionZ - config.depth/2 + config.legThickness/2},
+        // Back left
+        {x: config.positionX - config.width/2 + config.legThickness/2, 
+        z: config.positionZ + config.depth/2 - config.legThickness/2},
+        // Back right
+        {x: config.positionX + config.width/2 - config.legThickness/2, 
+        z: config.positionZ + config.depth/2 - config.legThickness/2}
+      ];
+
+      // Create each leg
+      legPositions.forEach(pos => {
+        const legGeometry = new THREE.BoxGeometry(
+          config.legThickness,
+          config.height,
+          config.legThickness
+        );
+        
+        const leg = new THREE.Mesh(legGeometry, woodMaterial);
+        leg.position.set(
+          pos.x,
+          config.floorLevel + config.height/2,
+          pos.z
+        );
+        leg.castShadow = true;
+        leg.receiveShadow = true;
+        table.add(leg);
+      });
+
+      // Store simple collision data
+      table.userData = {
+        collision: {
+          minX: config.positionX - config.width/2,
+          maxX: config.positionX + config.width/2,
+          minZ: config.positionZ - config.depth/2,
+          maxZ: config.positionZ + config.depth/2
+        }
+      };
+
+      scene.add(table);
+
+      // Register table with physics system
+      setTableReference(table);
+
+      console.log('Table with legs created successfully');
+      } catch (err) {
+      console.error('Failed to create table:', err);
+      }
+    
+    // Store outside elements
     if (outside) {
       sceneObjects.outsideElements = outside;
-      console.log('Outside elements stored:', outside);
-    }
-    
-    // Add clouds with error handling
-    try {
-      sceneObjects.clouds = addClouds(scene);
-      console.log('Clouds added:', sceneObjects.clouds);
-    } catch (error) {
-      console.error('Failed to add clouds:', error);
     }
     
     console.log('Scene initialization complete');
-    return { walls, floor, ceiling, outside, path };
+    return { walls, floor, ceiling, outside, path, table };
   } catch (error) {
     console.error('Error initializing scene:', error);
-    return null;
+    // Try to return basic scene for fallback
+    return { walls: null, floor: null, ceiling: null, outside: null, path: null, table: null };
   }
 }
 
 // Setup shadows for scene elements
-export function setupShadows(walls, floor, ceiling) {
-  console.log('Setting up shadows for:', { walls, floor, ceiling });
+export function setupShadows(walls, floor, ceiling, table) {
+  console.log('Setting up shadows for:', { walls, floor, ceiling, table });
   
   // Setup wall shadows
   if (walls) {
@@ -104,6 +203,16 @@ export function setupShadows(walls, floor, ceiling) {
   // Setup floor and ceiling shadows
   if (floor) floor.receiveShadow = true;
   if (ceiling) ceiling.receiveShadow = true;
+  
+  // Setup table shadows
+  if (table) {
+    if (table.children) {
+      table.children.forEach(part => {
+        part.castShadow = true;
+        part.receiveShadow = true;
+      });
+    }
+  }
   
   // Setup moon light shadows with detailed logging
   if (sceneObjects.outsideElements?.moon?.moonLight) {
