@@ -11,9 +11,10 @@ export async function setupScene(scene) {
     
     // Create path to entrance
     const path = createPathToEntrance(scene, {
-      startPosition: new THREE.Vector3(0, -3.1, doorZ + 25),
-      endPosition: new THREE.Vector3(0, -3.1, doorZ),
-      width: 3.5
+      startPosition: new THREE.Vector3(0, -3.1, doorZ + 25), 
+      endPosition: new THREE.Vector3(0, -3.1, doorZ),        
+      width: 4.0,                                          
+      pathColor: 0x664444                                
     });
     console.log('Path created successfully');
   
@@ -67,6 +68,7 @@ export async function setupScene(scene) {
     });
     console.log('Outside scenery created successfully');
     
+
     // Create table WITHOUT light to avoid potential issues
     let table = null;
     try {

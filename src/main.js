@@ -14,7 +14,7 @@ import {
   setCameraAngles // Add this import
 } from './controls.js';
 import { playerState, sceneObjects, updateGameLighting } from './gameState.js';
-import { animateClouds, animateMoon } from './outsidescenery.js';
+import { animateClouds, animateMoon, createRocks } from './outsidescenery.js';
 
 // Setup core elements
 const scene = new THREE.Scene();
@@ -57,6 +57,10 @@ document.body.appendChild(stats.dom);
 
 // Setup lighting
 const { ambientLight, pointLight } = setupBaseLighting(scene);
+
+// Add foggy environment
+scene.fog = new THREE.FogExp2(0x221122, 0.008);
+scene.background = new THREE.Color(0x111111);
 
 // Show loading status
 const loadingStatus = document.createElement('div');
