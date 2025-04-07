@@ -1,21 +1,28 @@
-import * as THREE from 'three';
-import Stats from 'three/examples/jsm/libs/stats.module.js';
+import * as THREE from "three";
+import Stats from "three/examples/jsm/libs/stats.module.js";
+import { updateCharacterAnimations } from "./characters.js";
 
 // Import configurations
-import { SCENE_CONFIG, MOVEMENT_CONFIG, doorZ } from './config.js';
+import { SCENE_CONFIG, MOVEMENT_CONFIG, doorZ } from "./config.js";
 
 // Import core modules
-import { setupBaseLighting } from './lighting.js';
-import { setupScene, setupShadows } from './scene.js';
-import { 
-  initControls, 
-  updateCameraRotation, 
+import { setupBaseLighting } from "./lighting.js";
+import { setupScene, setupShadows } from "./scene.js";
+import {
+  initControls,
+  updateCameraRotation,
   updateMovement,
-  setCameraAngles
-} from './controls.js';
-import { playerState, sceneObjects, updateGameLighting, checkTableProximity, tableInteraction } from './gameState.js';
-import { animateClouds, animateMoon, createRocks } from './outsidescenery.js';
-import { startGame, updateCameraTransition } from './game.js';
+  setCameraAngles,
+} from "./controls.js";
+import {
+  playerState,
+  sceneObjects,
+  updateGameLighting,
+  checkTableProximity,
+  tableInteraction,
+} from "./gameState.js";
+import { animateClouds, animateMoon, createRocks } from "./outsidescenery.js";
+import { startGame, updateCameraTransition } from "./game.js";
 
 // Setup core elements
 const scene = new THREE.Scene();
@@ -69,22 +76,22 @@ scene.fog = new THREE.FogExp2(0x221122, 0.008);
 scene.background = new THREE.Color(0x111111);
 
 // Show loading status
-const loadingStatus = document.createElement('div');
-loadingStatus.id = 'loading-status';
-loadingStatus.style.position = 'absolute';
-loadingStatus.style.top = '50%';
-loadingStatus.style.left = '50%';
-loadingStatus.style.transform = 'translate(-50%, -50%)';
-loadingStatus.style.color = '#ffffff';
-loadingStatus.style.fontFamily = 'Arial, sans-serif';
-loadingStatus.style.fontSize = '24px';
-loadingStatus.style.textAlign = 'center';
-loadingStatus.innerHTML = 'Loading...';
+const loadingStatus = document.createElement("div");
+loadingStatus.id = "loading-status";
+loadingStatus.style.position = "absolute";
+loadingStatus.style.top = "50%";
+loadingStatus.style.left = "50%";
+loadingStatus.style.transform = "translate(-50%, -50%)";
+loadingStatus.style.color = "#ffffff";
+loadingStatus.style.fontFamily = "Arial, sans-serif";
+loadingStatus.style.fontSize = "24px";
+loadingStatus.style.textAlign = "center";
+loadingStatus.innerHTML = "Loading...";
 document.body.appendChild(loadingStatus);
 
 // Simple animation loop to show something while loading
 function loadingAnimation() {
-  if (document.querySelector('#loading-status')) {
+  if (document.querySelector("#loading-status")) {
     requestAnimationFrame(loadingAnimation);
     loadingCube.rotation.x += 0.01;
     loadingCube.rotation.y += 0.01;
@@ -95,70 +102,76 @@ function loadingAnimation() {
 loadingAnimation();
 
 // Initialize the scene and start animation loop with proper error handling
-init().then(elements => {
-  document.body.removeChild(loadingStatus);
-  scene.remove(loadingCube);
-  
-  sceneElements = elements;
-  window.gameTable = elements.table;
+init()
+  .then((elements) => {
+    document.body.removeChild(loadingStatus);
+    scene.remove(loadingCube);
 
-  console.log('Scene initialization successful:', sceneElements);
-  // Start the main animation loop
-  animate();
-}).catch(error => {
-  console.error('Failed to initialize scene:', error);
-  loadingStatus.innerHTML = `Error: ${error.message}<br>Check console for details`;
-  loadingStatus.style.color = 'red';
-});
+    sceneElements = elements;
+    window.gameTable = elements.table;
+
+    console.log("Scene initialization successful:", sceneElements);
+    // Start the main animation loop
+    animate();
+  })
+  .catch((error) => {
+    console.error("Failed to initialize scene:", error);
+    loadingStatus.innerHTML = `Error: ${error.message}<br>Check console for details`;
+    loadingStatus.style.color = "red";
+  });
 
 // Animation loop with error handling
 function animate() {
   requestAnimationFrame(animate);
-  
+
   try {
     const time = Date.now();
-    
+
     // Check if we're in camera transition
     const isTransitioning = updateCameraTransition(camera);
-    
+
     // Skip movement updates if in game or transitioning
     if (!playerState.inGame && !isTransitioning) {
       // Update player & camera
       updateMovement(camera);
       updateCameraRotation(camera);
-      
+
       // Check table proximity if the game is active
       if (playerState.insideRoom && sceneElements && sceneElements.table) {
         checkTableProximity(camera.position, sceneElements.table);
       }
     }
-    
+
+    updateCharacterAnimations();
+
     if (pointLight) {
       updateGameLighting(pointLight);
     }
-    
+
     // Animate scene elements with proper checks
     if (sceneObjects) {
       if (sceneObjects.clouds) {
         animateClouds(sceneObjects.clouds);
       }
-      
+
       if (sceneObjects.outsideElements?.moon) {
         animateMoon(sceneObjects.outsideElements.moon, time);
       }
     }
-    
+
     renderer.render(scene, camera);
     stats.update();
   } catch (error) {
-    console.error('Error in animation loop:', error);
+    console.error("Error in animation loop:", error);
   }
 }
 
 // Initialize scene and start game
 async function init() {
   // Initialize camera angles based on initial look direction
-  const initialDirection = new THREE.Vector3().subVectors(doorPosition, camera.position).normalize();
+  const initialDirection = new THREE.Vector3()
+    .subVectors(doorPosition, camera.position)
+    .normalize();
   const initialYaw = Math.atan2(-initialDirection.x, -initialDirection.z);
   const initialPitch = Math.asin(initialDirection.y);
 
@@ -168,19 +181,45 @@ async function init() {
   try {
     // Setup scene using the modular approach
     const sceneElements = await setupScene(scene);
-    
+
     if (!sceneElements) {
-      throw new Error('Scene setup failed - no scene elements returned');
+      throw new Error("Scene setup failed - no scene elements returned");
     }
-    
+
     // Setup shadows with error handling
     try {
-      setupShadows(sceneElements.walls, sceneElements.floor, sceneElements.ceiling, sceneElements.table);
+      setupShadows(
+        sceneElements.walls,
+        sceneElements.floor,
+        sceneElements.ceiling,
+        sceneElements.table
+      );
     } catch (shadowError) {
-      console.warn('Shadow setup had issues:', shadowError);
+      console.warn("Shadow setup had issues:", shadowError);
       // Continue anyway - shadows are not critical
     }
-    
+
+    if (
+      sceneElements.table &&
+      sceneElements.table.userData &&
+      sceneElements.table.userData.collision
+    ) {
+      // Setup characters with the scene and table data
+      const { setupCharacters, animateCharacter } = await import(
+        "./characters.js"
+      );
+      const characterState = setupCharacters(
+        scene,
+        sceneElements.table.userData.collision
+      );
+
+      // Start idle animation for the enemy
+      if (characterState && characterState.enemyModel) {
+        animateCharacter("enemy", "idle");
+        console.log("Enemy character initialized and set to idle");
+      }
+    }
+
     return sceneElements;
   } catch (error) {
     throw error; // Re-throw to be handled by the Promise.catch()
@@ -190,48 +229,50 @@ async function init() {
 // Setup UI elements
 function setupUI() {
   // Instructions UI
-  window.instructions = document.createElement('div');
-  instructions.id = 'instructions';
-  instructions.style.position = 'absolute';
-  instructions.style.top = '10px';
-  instructions.style.width = '100%';
-  instructions.style.textAlign = 'center';
-  instructions.style.color = '#ffffff';
-  instructions.style.fontFamily = 'Arial, sans-serif';
-  instructions.style.fontSize = '14px';
-  instructions.style.padding = '10px';
-  instructions.style.backgroundColor = 'rgba(0,0,0,0.5)';
-  instructions.style.zIndex = '100';
-  instructions.innerHTML = 'Click to start<br>WASD = Move, SHIFT = Run, Mouse = Look';
+  window.instructions = document.createElement("div");
+  instructions.id = "instructions";
+  instructions.style.position = "absolute";
+  instructions.style.top = "10px";
+  instructions.style.width = "100%";
+  instructions.style.textAlign = "center";
+  instructions.style.color = "#ffffff";
+  instructions.style.fontFamily = "Arial, sans-serif";
+  instructions.style.fontSize = "14px";
+  instructions.style.padding = "10px";
+  instructions.style.backgroundColor = "rgba(0,0,0,0.5)";
+  instructions.style.zIndex = "100";
+  instructions.innerHTML =
+    "Click to start<br>WASD = Move, SHIFT = Run, Mouse = Look";
   document.body.appendChild(instructions);
-  
+
   // Enhanced Play Game UI (initially hidden)
-  window.playPrompt = document.createElement('div');
-  playPrompt.id = 'play-prompt';
-  playPrompt.style.position = 'absolute';
-  playPrompt.style.top = '50%';
-  playPrompt.style.left = '50%';
-  playPrompt.style.transform = 'translate(-50%, -50%)';
+  window.playPrompt = document.createElement("div");
+  playPrompt.id = "play-prompt";
+  playPrompt.style.position = "absolute";
+  playPrompt.style.top = "50%";
+  playPrompt.style.left = "50%";
+  playPrompt.style.transform = "translate(-50%, -50%)";
   playPrompt.style.fontFamily = '"Trebuchet MS", Arial, sans-serif';
-  playPrompt.style.padding = '35px 50px';
-  playPrompt.style.borderRadius = '15px';
-  playPrompt.style.zIndex = '100';
-  playPrompt.style.display = 'none';
-  
+  playPrompt.style.padding = "35px 50px";
+  playPrompt.style.borderRadius = "15px";
+  playPrompt.style.zIndex = "100";
+  playPrompt.style.display = "none";
+
   // Elemental themed background with tri-color gradient
-  playPrompt.style.background = 'linear-gradient(135deg, rgba(0,102,204,0.85) 0%, rgba(138,43,226,0.85) 50%, rgba(204,51,0,0.85) 100%)';
+  playPrompt.style.background =
+    "linear-gradient(135deg, rgba(0,102,204,0.85) 0%, rgba(138,43,226,0.85) 50%, rgba(204,51,0,0.85) 100%)";
   playPrompt.style.boxShadow = `
     0 0 30px rgba(0, 102, 204, 0.6),
     0 0 60px rgba(204, 51, 0, 0.4),
     inset 0 0 20px rgba(255, 255, 255, 0.15)
   `;
-  playPrompt.style.border = '2px solid rgba(255,255,255,0.3)';
-  
+  playPrompt.style.border = "2px solid rgba(255,255,255,0.3)";
+
   // Add animation
-  playPrompt.style.animation = 'elementalPulse 3s infinite ease-in-out';
-  
+  playPrompt.style.animation = "elementalPulse 3s infinite ease-in-out";
+
   // Create a style element for the animation
-  const style = document.createElement('style');
+  const style = document.createElement("style");
   style.textContent = `
     @keyframes elementalPulse {
       0% { 
@@ -295,7 +336,7 @@ function setupUI() {
     }
   `;
   document.head.appendChild(style);
-  
+
   // Enhanced content with elemental icons and themed text
   playPrompt.innerHTML = `
     <div style="display: flex; align-items: center; justify-content: center;">
@@ -319,18 +360,18 @@ function setupUI() {
                     linear-gradient(135deg, #aaddff, transparent, #ff3300);
          opacity: 0.3; z-index: -1;"></div>
   `;
-  
+
   document.body.appendChild(playPrompt);
 }
 
 // Handle window resize events
-window.addEventListener('resize', () => {
+window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
 // Global error handler
-window.addEventListener('error', event => {
-  console.error('Global error:', event.error);
+window.addEventListener("error", (event) => {
+  console.error("Global error:", event.error);
 });
