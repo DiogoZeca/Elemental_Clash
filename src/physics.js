@@ -10,7 +10,6 @@ let tableObject = null;
  */
 export function setTableReference(table) {
   tableObject = table;
-  console.log('Table reference set for collision detection');
 }
 
 /**

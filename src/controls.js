@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { MOVEMENT_CONFIG } from './config.js';
 import { isWithinBoundaries, calculateSlideMovement } from './physics.js';
-import { playerState, moveState, checkRoomEntry } from './gameState.js';
+import { playerState, moveState, checkRoomEntry, tableInteraction } from './gameState.js';
+import { startGame } from './game.js';
 
 // Camera rotation variables
 export let cameraPitch = 0;
@@ -89,6 +90,13 @@ function handleKeyDown(event) {
     case 'KeyA': moveState.left = true; break;
     case 'KeyD': moveState.right = true; break;
     case 'ShiftLeft': moveState.running = true; break;
+    case 'KeyE': 
+      // Interact with table if close enough
+      if (tableInteraction.isNearTable && !tableInteraction.canPlay) {
+        tableInteraction.canPlay = true;
+        startGame(); // Function to start the game
+      }
+      break;
   }
 }
 

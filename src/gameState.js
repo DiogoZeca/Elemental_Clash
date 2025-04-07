@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { doorZ } from './config.js';
 
 // Player movement state
@@ -12,7 +13,8 @@ export const moveState = {
 // Player game state
 export const playerState = {
   insideRoom: false,
-  pointerLocked: false
+  pointerLocked: false,
+  inGame: false
 };
 
 // Scene objects references
@@ -25,26 +27,20 @@ export const sceneObjects = {
  * Check if player has entered the room
  */
 export function checkRoomEntry(position) {
-  // Room entrance is around door position with some tolerance
   if (!playerState.insideRoom && 
-      Math.abs(position.x) < 2 &&      // Centered horizontally on door
-      position.z < doorZ + 2 &&        // Close to door on Z-axis
-      position.z > doorZ - 2) {        // Not too far inside
+      Math.abs(position.x) < 2 &&
+      position.z < doorZ + 2 &&
+      position.z > doorZ - 2) {
     playerState.insideRoom = true;
-    startGame();
+    onRoomEntry();
   }
 }
 
 /**
- * Start game when player enters the room
+ * Actions to perform when player enters the room
  */
-export function startGame() {
-  console.log("Game started!");
-  
-  // This function will call any necessary code when the game starts
-  // You can add callbacks or event emitters here
-  
-  // Return true to indicate game has started
+export function onRoomEntry() {
+  // Room entry logic here
   return true;
 }
 
@@ -53,8 +49,58 @@ export function startGame() {
  */
 export function updateGameLighting(pointLight) {
   if (playerState.insideRoom) {
-    // Change indoor light color to indicate game has started
     pointLight.color.set(0x00ffff);
     pointLight.intensity = 1.2;
+  }
+}
+
+// Table interaction state
+export const tableInteraction = {
+  isNearTable: false,
+  tablePlayDistance: 12, 
+  canPlay: false
+};
+
+/**
+ * Check if player is near the table for starting the game
+ * @param {THREE.Vector3} playerPosition - Current player position
+ * @param {THREE.Object3D} table - Reference to the table object
+ */
+export function checkTableProximity(playerPosition, table) {
+  if (!table || !table.userData || !table.userData.collision) {
+    return false;
+  }
+  
+  try {
+    // Get table center position
+    const tablePosition = new THREE.Vector3(
+      (table.userData.collision.minX + table.userData.collision.maxX) / 2,
+      playerPosition.y,
+      (table.userData.collision.minZ + table.userData.collision.maxZ) / 2
+    );
+    
+    // Calculate distance to table
+    const distance = playerPosition.distanceTo(tablePosition);
+    
+    // Update state if near table
+    const wasNearTable = tableInteraction.isNearTable;
+    tableInteraction.isNearTable = (distance < tableInteraction.tablePlayDistance);
+    
+    // If state changed, update UI
+    if (wasNearTable !== tableInteraction.isNearTable && window.playPrompt) {
+      window.playPrompt.style.display = tableInteraction.isNearTable ? 'block' : 'none';
+      
+      if (tableInteraction.isNearTable) {
+        window.playPrompt.style.opacity = '0';
+        setTimeout(() => {
+          window.playPrompt.style.transition = 'opacity 0.5s';
+          window.playPrompt.style.opacity = '1';
+        }, 10);
+      }
+    }
+    
+    return tableInteraction.isNearTable;
+  } catch (error) {
+    return false;
   }
 }

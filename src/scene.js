@@ -7,8 +7,6 @@ import { setTableReference } from './physics.js';
 
 export async function setupScene(scene) {
   try {
-    console.log('Starting scene initialization...');
-    
     // Create path to entrance
     const path = createPathToEntrance(scene, {
       startPosition: new THREE.Vector3(0, -3.1, doorZ + 25), 
@@ -16,7 +14,6 @@ export async function setupScene(scene) {
       width: 4.0,                                          
       pathColor: 0x664444                                
     });
-    console.log('Path created successfully');
   
     // Load wall environment first
     const walls = await createWallEnvironment(scene, {
@@ -144,7 +141,6 @@ export async function setupScene(scene) {
         table.add(leg);
       });
 
-      // Store simple collision data
       table.userData = {
         collision: {
           minX: config.positionX - config.width/2,
@@ -153,6 +149,7 @@ export async function setupScene(scene) {
           maxZ: config.positionZ + config.depth/2
         }
       };
+      console.log('Table collision bounds:', table.userData.collision);
 
       scene.add(table);
 

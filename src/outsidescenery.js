@@ -9,8 +9,6 @@ import { sceneObjects } from './gameState.js';
  * @returns {THREE.Object3D} - The created path object
  */
 export function createPathToEntrance(scene, options = {}) {
-  console.log('Creating path to room entrance...');
-  
   const config = {
     startPosition: options.startPosition || new THREE.Vector3(0, -3.1, doorZ + 25),
     endPosition: options.endPosition || new THREE.Vector3(0, -3.1, doorZ),
@@ -158,9 +156,6 @@ export function createPathToEntrance(scene, options = {}) {
  */
 export async function createOutsideScenery(scene, options = {}) {
   try {
-    console.log('Creating night-time outside scenery...');
-    
-    // Default options
     const config = {
       groundSize: options.groundSize || 100,
       skyboxSize: options.skyboxSize || 500,
@@ -170,7 +165,6 @@ export async function createOutsideScenery(scene, options = {}) {
       cloudsCount: options.cloudsCount || 12,
       mountainsEnabled: options.mountainsEnabled || false
     };
-    
     // Create dark ground
     const groundGeometry = new THREE.PlaneGeometry(config.groundSize, config.groundSize);
     const groundMaterial = new THREE.MeshStandardMaterial({ 
