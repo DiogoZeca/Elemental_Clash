@@ -11,17 +11,15 @@ import {
   initControls, 
   updateCameraRotation, 
   updateMovement,
-  setCameraAngles // Add this import
+  setCameraAngles
 } from './controls.js';
 import { playerState, sceneObjects, updateGameLighting, checkTableProximity, tableInteraction } from './gameState.js';
 import { animateClouds, animateMoon, createRocks } from './outsidescenery.js';
-import { startGame } from './game.js';
+import { startGame, updateCameraTransition } from './game.js';
 
 // Setup core elements
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
-
-let sceneElements = null;
 
 // Add a simple visual reference while loading
 const loadingGeometry = new THREE.BoxGeometry(5, 5, 5);
@@ -40,6 +38,11 @@ const camera = new THREE.PerspectiveCamera(
 const doorPosition = new THREE.Vector3(0, MOVEMENT_CONFIG.playerHeight, doorZ);
 camera.position.set(0, MOVEMENT_CONFIG.playerHeight, doorZ + 25);
 camera.lookAt(doorPosition);
+
+// Create these global variables AFTER camera is defined
+let sceneElements = null;
+window.gameCamera = camera;
+window.gameTable = null;
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -67,6 +70,7 @@ scene.background = new THREE.Color(0x111111);
 
 // Show loading status
 const loadingStatus = document.createElement('div');
+loadingStatus.id = 'loading-status';
 loadingStatus.style.position = 'absolute';
 loadingStatus.style.top = '50%';
 loadingStatus.style.left = '50%';
@@ -95,7 +99,8 @@ init().then(elements => {
   document.body.removeChild(loadingStatus);
   scene.remove(loadingCube);
   
-  sceneElements = elements; 
+  sceneElements = elements;
+  window.gameTable = elements.table;
 
   console.log('Scene initialization successful:', sceneElements);
   // Start the main animation loop
@@ -113,8 +118,11 @@ function animate() {
   try {
     const time = Date.now();
     
-    // Skip movement updates if in card game
-    if (!playerState.inGame) {
+    // Check if we're in camera transition
+    const isTransitioning = updateCameraTransition(camera);
+    
+    // Skip movement updates if in game or transitioning
+    if (!playerState.inGame && !isTransitioning) {
       // Update player & camera
       updateMovement(camera);
       updateCameraRotation(camera);
@@ -167,8 +175,9 @@ async function init() {
     
     // Setup shadows with error handling
     try {
-      setupShadows(sceneElements.walls, sceneElements.floor, sceneElements.ceiling);
+      setupShadows(sceneElements.walls, sceneElements.floor, sceneElements.ceiling, sceneElements.table);
     } catch (shadowError) {
+      console.warn('Shadow setup had issues:', shadowError);
       // Continue anyway - shadows are not critical
     }
     
@@ -180,7 +189,7 @@ async function init() {
 
 // Setup UI elements
 function setupUI() {
-  // Instructions UI (existing code remains the same)
+  // Instructions UI
   window.instructions = document.createElement('div');
   instructions.id = 'instructions';
   instructions.style.position = 'absolute';

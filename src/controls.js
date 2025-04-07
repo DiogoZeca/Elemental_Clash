@@ -92,9 +92,9 @@ function handleKeyDown(event) {
     case 'ShiftLeft': moveState.running = true; break;
     case 'KeyE': 
       // Interact with table if close enough
-      if (tableInteraction.isNearTable && !tableInteraction.canPlay) {
+      if (tableInteraction.isNearTable && !tableInteraction.canPlay && window.gameCamera && window.gameTable) {
         tableInteraction.canPlay = true;
-        startGame(); // Function to start the game
+        startGame(window.gameCamera, window.gameTable);
       }
       break;
   }
