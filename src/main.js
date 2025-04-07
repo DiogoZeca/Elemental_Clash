@@ -132,7 +132,6 @@ function animate() {
     stats.update();
   } catch (error) {
     console.error('Error in animation loop:', error);
-    // Don't stop the animation loop, just log the error
   }
 }
 

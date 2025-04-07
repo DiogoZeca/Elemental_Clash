@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { doorZ } from './config.js';
+import { SCENE_CONFIG, doorZ } from './config.js';
 import { sceneObjects } from './gameState.js';
 
 /**
- * Creates a path to the room entrance
+ * Creates a path to the room entrance with improved visibility
  * @param {THREE.Scene} scene - The scene to add the path to
  * @param {Object} options - Configuration options
  * @returns {THREE.Object3D} - The created path object
@@ -15,8 +15,9 @@ export function createPathToEntrance(scene, options = {}) {
     startPosition: options.startPosition || new THREE.Vector3(0, -3.1, doorZ + 25),
     endPosition: options.endPosition || new THREE.Vector3(0, -3.1, doorZ),
     width: options.width || 4.0,
-    heightOffset: options.heightOffset || 0.05,
-    pathColor: options.pathColor || 0x664444
+    heightOffset: options.heightOffset || 0.15, // Increased height to stand out more
+    pathColor: options.pathColor || 0x884444, // Brighter reddish color
+    pathPattern: options.pathPattern || true
   };
   
   // Create a group to hold path segments
@@ -27,22 +28,22 @@ export function createPathToEntrance(scene, options = {}) {
   const pathLength = pathDirection.length();
   pathDirection.normalize();
   
-  // Create path geometry
-  const pathGeometry = new THREE.PlaneGeometry(pathLength, config.width);
+  // Create path geometry with more segments for better detail
+  const pathGeometry = new THREE.PlaneGeometry(pathLength, config.width, 20, 2);
   
-  // Create path material with a distinctive color and texture
+  // Create path material with a more distinctive color and stronger emissive
   const pathMaterial = new THREE.MeshStandardMaterial({
     color: config.pathColor,
-    roughness: 0.7,
-    metalness: 0.2,
-    emissive: 0x331111,
-    emissiveIntensity: 0.2
+    roughness: 0.5, // Smoother to reflect more light
+    metalness: 0.3, // Slightly more metallic for better reflections
+    emissive: 0x552222, // Stronger red emissive 
+    emissiveIntensity: 0.4  // Doubled emissive intensity
   });
   
   // Create path mesh
   const path = new THREE.Mesh(pathGeometry, pathMaterial);
   
-  // Position and rotate path
+  // Position and rotate path - raised slightly higher
   path.position.copy(config.startPosition).add(
       pathDirection.clone().multiplyScalar(pathLength / 2)
   );
@@ -61,43 +62,45 @@ export function createPathToEntrance(scene, options = {}) {
   // Add path to group
   pathGroup.add(path);
   
-  // Add lights along the path for better visibility
-  const lightCount = Math.ceil(pathLength / 4);
+  // Add BRIGHTER lights along the path for better visibility
+  const lightCount = Math.ceil(pathLength / 3); // More lights
   
   for (let i = 0; i <= lightCount; i++) {
-      // Create a small point light with reddish color to match moon
-      const light = new THREE.PointLight(0xff8866, 0.45, 4.5);
+      // Create a small point light with brighter reddish color to match moon
+      const light = new THREE.PointLight(0xff9977, 0.7, 5.0); // Brighter, wider range
       
       // Calculate position along path
       const t = i / lightCount;
       const pos = new THREE.Vector3().lerpVectors(config.startPosition, config.endPosition, t);
-      pos.y += 0.2;
+      pos.y += 0.4; // Higher off the ground
       
       light.position.copy(pos);
       scene.add(light);
     
-      // Create small glowing sphere at light position
-      const sphereGeometry = new THREE.SphereGeometry(0.15, 8, 8);
+      // Create larger glowing sphere at light position
+      const sphereGeometry = new THREE.SphereGeometry(0.2, 10, 10); // Larger, more detailed
       const sphereMaterial = new THREE.MeshBasicMaterial({
-        color: 0xff6644, 
+        color: 0xff8855, 
         transparent: true, 
-        opacity: 0.7
+        opacity: 0.8 // More opaque
       });
       const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
       sphere.position.copy(light.position);
       pathGroup.add(sphere);
   }
   
-  // Add path edge details - small stones along the edges
-  const stoneCount = Math.ceil(pathLength / 1.5);
-  const stoneGeometry = new THREE.DodecahedronGeometry(0.15, 0);
+  // Add path edge details - larger stones with more contrast
+  const stoneCount = Math.ceil(pathLength / 1.2); // More stones
+  const stoneGeometry = new THREE.DodecahedronGeometry(0.25, 0); // Larger stones
   
   for (let side = -1; side <= 1; side += 2) {
       for (let i = 0; i < stoneCount; i++) {
           const stoneMaterial = new THREE.MeshStandardMaterial({
-              color: 0x333333,
-              roughness: 0.9,
-              metalness: 0.1
+              color: 0x555555, // Lighter gray for better contrast
+              roughness: 0.7,
+              metalness: 0.2,
+              emissive: 0x222222,
+              emissiveIntensity: 0.3
           });
           
           const stone = new THREE.Mesh(stoneGeometry, stoneMaterial);
@@ -108,11 +111,11 @@ export function createPathToEntrance(scene, options = {}) {
           
           // Offset to the side of the path
           const perpendicular = new THREE.Vector3(-pathDirection.z, 0, pathDirection.x);
-          const offset = (config.width/2 + 0.1) * side;
+          const offset = (config.width/2 + 0.2) * side;
           const offsetPos = perpendicular.clone().multiplyScalar(offset);
           
           stone.position.copy(pathPos).add(offsetPos);
-          stone.position.y = -3 + Math.random() * 0.1;
+          stone.position.y = -3 + Math.random() * 0.2; // More height variation
           
           // Random rotation
           stone.rotation.set(
@@ -121,8 +124,26 @@ export function createPathToEntrance(scene, options = {}) {
               Math.random() * Math.PI
           );
           
+          // Stone receives and casts shadows
+          stone.receiveShadow = true;
+          stone.castShadow = true;
+          
           pathGroup.add(stone);
       }
+  }
+
+  // Optional: Add subtle pattern to path using bump geometry
+  if (config.pathPattern) {
+    // Distort path geometry slightly to create a cobblestone effect
+    const vertices = pathGeometry.attributes.position.array;
+    for (let i = 0; i < vertices.length; i += 3) {
+      // Only affect Y values (which will be up after rotation)
+      if (i % 9 !== 0) { // Don't displace edge vertices
+        vertices[i + 1] += (Math.random() - 0.5) * 0.1;
+      }
+    }
+    pathGeometry.attributes.position.needsUpdate = true;
+    pathGeometry.computeVertexNormals();
   }
   
   scene.add(pathGroup);
@@ -153,11 +174,11 @@ export async function createOutsideScenery(scene, options = {}) {
     // Create dark ground
     const groundGeometry = new THREE.PlaneGeometry(config.groundSize, config.groundSize);
     const groundMaterial = new THREE.MeshStandardMaterial({ 
-      color: 0x1a2f25,
-      roughness: 0.9, 
-      metalness: 0.1,
-      emissive: 0x110a0a,
-      emissiveIntensity: 0.2
+      color: 0x0f1f18, 
+      roughness: 0.95, 
+      metalness: 0.05,
+      emissive: 0x080505,
+      emissiveIntensity: 0.1 
     });
 
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
@@ -257,16 +278,19 @@ export function createRocks(scene, options = {}) {
     maxSize: options.maxSize || 3.5,
     spread: options.spread || 70,
     minDistance: options.minDistance || 10, 
-    buildingPadding: options.buildingPadding || 5, 
-    pathWidth: options.pathWidth || 6.0 
+    buildingPadding: options.buildingPadding || 10, 
+    pathWidth: options.pathWidth || 6.0, 
+    roomWidth: SCENE_CONFIG.roomWidth,
+    roomDepth: SCENE_CONFIG.roomDepth,
+    wallOffset: SCENE_CONFIG.wallOffset
   };
 
   // Define building boundaries to avoid
   const buildingBounds = {
-    minX: -15 - config.buildingPadding,
-    maxX: 15 + config.buildingPadding,
-    minZ: -15 - config.buildingPadding,
-    maxZ: 15 + config.buildingPadding
+    minX: -config.roomWidth/2 - config.buildingPadding,
+    maxX: config.roomWidth/2 + config.buildingPadding,
+    minZ: config.wallOffset - config.buildingPadding,
+    maxZ: doorZ + config.buildingPadding
   };
   
   // Define path boundaries
@@ -403,20 +427,20 @@ export function createRocks(scene, options = {}) {
  * @returns {Object} - The moon mesh and its light
  */
 function createMoon(scene) {
-  const moonGeometry = new THREE.SphereGeometry(8, 32, 32);
+  const moonGeometry = new THREE.SphereGeometry(32, 32, 32);
   const moonMaterial = new THREE.MeshStandardMaterial({
     color: 0xff6666,
     emissive: 0xff7777,
-    emissiveIntensity: 2.0,
-    roughness: 0.4
+    emissiveIntensity: 3.0,
+    roughness: 0.2
   });
 
   const moon = new THREE.Mesh(moonGeometry, moonMaterial);
-  moon.position.set(40, 60, -100);
+  moon.position.set(40, 100, -100);
   scene.add(moon);
 
   // Add a light source from the moon
-  const moonLight = new THREE.DirectionalLight(0xff4444, 3.0);
+  const moonLight = new THREE.DirectionalLight(0xff4444, 5.0);
   moonLight.position.copy(moon.position);
   moonLight.target.position.set(0, 0, 0);
   scene.add(moonLight);
@@ -424,15 +448,15 @@ function createMoon(scene) {
 
   // Setup for shadow casting
   moonLight.castShadow = true;
-  moonLight.shadow.mapSize.width = 2048;
-  moonLight.shadow.mapSize.height = 2048;
+  moonLight.shadow.mapSize.width = 4096;
+  moonLight.shadow.mapSize.height = 4096;
   moonLight.shadow.camera.near = 10;
-  moonLight.shadow.camera.far = 200;
-  moonLight.shadow.camera.left = -50;
-  moonLight.shadow.camera.right = 50;
-  moonLight.shadow.camera.top = 50;
-  moonLight.shadow.camera.bottom = -50;
-  moonLight.shadow.bias = -0.0005;
+  moonLight.shadow.camera.far = 350;
+  moonLight.shadow.camera.left = -150;
+  moonLight.shadow.camera.right = 150;
+  moonLight.shadow.camera.top = 150;
+  moonLight.shadow.camera.bottom = -150;
+  moonLight.shadow.bias = -0.0003;
     
   // Add a soft red point light for the moon's glow 
   const moonGlow = new THREE.PointLight(0xff5555, 3.5, 350);
@@ -458,7 +482,7 @@ function createMoon(scene) {
 export function animateMoon(moonObject, time = Date.now()) {
   if (!moonObject || !moonObject.moon) return;
   
-  const cycle = 120000; 
+  const cycle = 500000; 
   const t = (time % cycle) / cycle;
   const oscillation = Math.sin(t * Math.PI * 2);
   
@@ -466,7 +490,7 @@ export function animateMoon(moonObject, time = Date.now()) {
   const x = oscillation * radius;
   const z = -100;
   const heightVariation = 30 * (1 - (oscillation * oscillation));
-  const y = 60 + heightVariation;
+  const y = 100 + heightVariation;
   
   // Update positions
   moonObject.moon.position.set(x, y, z);
@@ -566,13 +590,13 @@ function createStarTexture() {
  */
 export function addClouds(scene, options = {}) {
   const config = {
-    count: options.count || 10,
+    count: options.count || 18,
     minHeight: options.minHeight || 20,
     maxHeight: options.maxHeight || 40,
     minSize: options.minSize || 3,
     maxSize: options.maxSize || 8,
-    spreadX: options.spreadX || 200,
-    spreadZ: options.spreadZ || 150,
+    spreadX: options.spreadX || 100,
+    spreadZ: options.spreadZ || 500,
     minDistance: options.minDistance || 25
   };
   
@@ -585,7 +609,7 @@ export function addClouds(scene, options = {}) {
     
     const posX = (Math.random() - 0.5) * config.spreadX;
     const posY = config.minHeight + Math.random() * (config.maxHeight - config.minHeight);
-    const posZ = -30 - Math.random() * config.spreadZ;
+    const posZ = (Math.random() - 0.5) * config.spreadZ;
     
     // Check distance from other clouds
     let tooClose = false;
@@ -631,7 +655,7 @@ export function addClouds(scene, options = {}) {
     }
     
     cloudGroup.userData = {
-      speed: 0.005 + Math.random() * 0.04
+      speed: 0.002 + Math.random() * 0.015
     };
     
     cloudGroup.position.set(posX, posY, posZ);
@@ -644,7 +668,7 @@ export function addClouds(scene, options = {}) {
 
 /**
  * Animates cloud movement
- * @param {Array<THREE.Group>} clouds - The clouds to animate
+ * @param {Array<THREE.Group>} clouds 
  */
 export function animateClouds(clouds) {
   if (!clouds) return;
@@ -652,7 +676,7 @@ export function animateClouds(clouds) {
   clouds.forEach(cloud => {
     if (cloud.userData && cloud.userData.speed) {
       cloud.position.x += cloud.userData.speed;
-      if (cloud.position.x > 75) cloud.position.x = -75;
+      if (cloud.position.x > 100) cloud.position.x = -100;
     }
   });
 }

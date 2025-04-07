@@ -76,14 +76,14 @@ export async function setupScene(scene) {
       table = new THREE.Group();
       
       const config = {
-        width: 10,
-        depth: 7,
+        width: 17,
+        depth: 12,
         height: 3,
         positionX: 0,
         positionZ: SCENE_CONFIG.wallOffset + SCENE_CONFIG.roomDepth * 0.5,
         floorLevel: SCENE_CONFIG.floorLevel,
         woodColor: 0x5c3a21,
-        legThickness: 0.4
+        legThickness: 0.6
       };
       
       // Create wood material
@@ -224,17 +224,17 @@ export function setupShadows(walls, floor, ceiling, table) {
     moonLight.castShadow = true;
     
     // Configure shadow quality
-    moonLight.shadow.mapSize.width = 2048;
-    moonLight.shadow.mapSize.height = 2048;
+    moonLight.shadow.mapSize.width = 4096;
+    moonLight.shadow.mapSize.height = 4096;
     
     // Setup shadow camera frustum
     moonLight.shadow.camera.near = 10;
-    moonLight.shadow.camera.far = 200;
-    moonLight.shadow.camera.left = -50;
-    moonLight.shadow.camera.right = 50;
-    moonLight.shadow.camera.top = 50;
-    moonLight.shadow.camera.bottom = -50;
-    moonLight.shadow.bias = -0.0005;
+    moonLight.shadow.camera.far = 350;
+    moonLight.shadow.camera.left = -150;
+    moonLight.shadow.camera.right = 150;
+    moonLight.shadow.camera.top = 150;
+    moonLight.shadow.camera.bottom = -150;
+    moonLight.shadow.bias = -0.0003;
   }
   
   console.log('Shadow setup complete');
