@@ -1,5 +1,8 @@
-import { exitGame } from './game.js';
+import { registerMiniGame, exitGame } from './gameManager.js';
 import { animateCharacter } from './characters.js';
+
+// Register this module's initialization function
+registerMiniGame(initGame);
 
 // Game state
 const gameState = {
@@ -27,10 +30,11 @@ let keyboardListener = null;
  * Initialize the mini-game UI and elements
  */
 export function initGame() {
+    console.log('Initializing mini-game UI...');
     // Ensure pointer lock is disabled at start
     document.exitPointerLock();
     
-    // Create game UI container
+    // Create game UI container with more transparency
     const gameUI = document.createElement('div');
     gameUI.id = 'game-ui';
     gameUI.style.position = 'absolute';
@@ -38,7 +42,7 @@ export function initGame() {
     gameUI.style.left = '0';
     gameUI.style.width = '100%';
     gameUI.style.height = '100%';
-    gameUI.style.backgroundColor = 'rgba(0,0,0,0.85)';
+    gameUI.style.backgroundColor = 'rgba(0,0,0,0.45)'; // More transparent background
     gameUI.style.zIndex = '200';
     gameUI.style.display = 'flex';
     gameUI.style.flexDirection = 'column';
@@ -58,33 +62,32 @@ export function initGame() {
         setTimeout(() => document.exitPointerLock(), 10);
     });
     
-    // Create header section
+    // Create header section - first create all elements, then style them
     const header = document.createElement('div');
     header.style.display = 'flex';
-    header.style.flexWrap = 'wrap';
-    header.style.justifyContent = 'space-between';
+    header.style.flexDirection = 'column';
+    header.style.alignItems = 'center';
     header.style.width = '100%';
-    header.style.padding = '10px';
-    header.style.boxSizing = 'border-box';
     
     // Create title
     const title = document.createElement('h1');
     title.textContent = 'Elemental Clash';
+    title.style.fontSize = '36px';
     title.style.color = '#ff5555';
-    title.style.margin = '0';
-    title.style.fontSize = 'min(32px, 5vw)';
-    title.style.textShadow = '0 0 10px rgba(255,85,85,0.5)';
-    title.style.whiteSpace = 'nowrap'; 
+    title.style.margin = '0 0 10px 0';
+    
+    // Add title to header
     header.appendChild(title);
     
     // Create scoreboard
     const scoreboard = document.createElement('div');
     scoreboard.id = 'scoreboard';
     scoreboard.style.display = 'flex';
+    scoreboard.style.justifyContent = 'center';
     scoreboard.style.alignItems = 'center';
-    scoreboard.style.gap = '10px';
-    scoreboard.style.fontSize = 'min(24px, 4vw)'; 
-    scoreboard.style.flexWrap = 'nowrap';
+    scoreboard.style.marginTop = '5px';
+    
+    // Now add scoreboard content
     scoreboard.innerHTML = `
         <div style="text-align: center">
             <div style="font-weight: bold; color: #00ccff">You</div>
@@ -99,7 +102,24 @@ export function initGame() {
             First to <span id="max-wins">${gameState.maxWins}</span> wins
         </div>
     `;
+    
+    // Add scoreboard to header
     header.appendChild(scoreboard);
+    
+    // NOW we can safely style everything
+    header.style.backgroundColor = 'rgba(0,0,0,0.5)'; // Add background to header
+    header.style.borderRadius = '10px';               // Rounded corners
+    header.style.padding = '10px 20px';               // Increased padding
+    
+    // Add glow to title to make it more visible against transparent background
+    title.style.textShadow = '0 0 15px rgba(255,85,85,0.8), 0 0 5px rgba(0,0,0,0.7)'; // Enhanced glow
+    
+    // Enhance scoreboard visibility
+    scoreboard.style.backgroundColor = 'rgba(30,30,40,0.7)'; // Add background
+    scoreboard.style.padding = '8px 15px';                   // Add padding
+    scoreboard.style.borderRadius = '8px';                   // Rounded corners
+    
+    // Add header to gameUI
     gameUI.appendChild(header);
     
     // Create battle area
@@ -123,6 +143,10 @@ export function initGame() {
     resultDisplay.style.marginBottom = '40px';
     resultDisplay.style.opacity = '0';
     resultDisplay.style.transition = 'opacity 0.5s';
+    resultDisplay.style.textShadow = '0 0 10px rgba(0,0,0,0.9)'; // Add text shadow
+    resultDisplay.style.backgroundColor = 'rgba(0,0,0,0.6)';     // Add background
+    resultDisplay.style.padding = '10px 20px';                   // Add padding
+    resultDisplay.style.borderRadius = '10px';                   // Rounded corners
     battleArea.appendChild(resultDisplay);
     
     // Battle cards
@@ -139,6 +163,8 @@ export function initGame() {
     const playerCard = createCard('player-card', 'Your Element');
     playerCard.style.transform = 'scale(0)';
     playerCard.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    playerCard.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.5)'; // Enhanced shadow
+    playerCard.style.backgroundColor = 'rgba(50, 50, 50, 0.85)';   // More opaque
     battleCards.appendChild(playerCard);
     
     // VS display
@@ -148,6 +174,11 @@ export function initGame() {
     vsDisplay.style.justifyContent = 'center';
     vsDisplay.style.alignItems = 'center';
     vsDisplay.style.padding = '0 20px';
+    vsDisplay.style.backgroundColor = 'rgba(20,20,30,0.7)'; // Add background
+    vsDisplay.style.borderRadius = '50%';                   // Make it circular
+    vsDisplay.style.width = '60px';                         // Set width
+    vsDisplay.style.height = '60px';                        // Set height
+    vsDisplay.style.boxShadow = '0 0 15px rgba(0,0,0,0.5)'; // Add shadow
     vsDisplay.innerHTML = `
         <div style="font-size: 40px; font-weight: bold; color: #aaa;">VS</div>
     `;
@@ -157,6 +188,8 @@ export function initGame() {
     const aiCard = createCard('ai-card', 'Enemy Element');
     aiCard.style.transform = 'scale(0)';
     aiCard.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    aiCard.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.5)'; // Enhanced shadow
+    aiCard.style.backgroundColor = 'rgba(50, 50, 50, 0.85)';   // More opaque
     battleCards.appendChild(aiCard);
     
     battleArea.appendChild(battleCards);
@@ -168,16 +201,19 @@ export function initGame() {
     selectionArea.style.flexDirection = 'column';
     selectionArea.style.alignItems = 'center';
     selectionArea.style.gap = '10px'; 
-    selectionArea.style.padding = '10px';
     selectionArea.style.marginBottom = '10px'; 
     selectionArea.style.width = '100%';
     selectionArea.style.boxSizing = 'border-box';
+    selectionArea.style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)'; // Add gradient
+    selectionArea.style.borderRadius = '10px';              // Rounded corners
+    selectionArea.style.padding = '15px';                   // Increased padding
 
     // Instructions heading
     const instructionsHeading = document.createElement('div');
     instructionsHeading.style.fontSize = 'min(24px, 4vw)'; 
     instructionsHeading.style.marginBottom = '10px'; 
     instructionsHeading.textContent = 'Choose your element:';
+    instructionsHeading.style.textShadow = '0 0 10px rgba(0,0,0,0.9)'; // Add text shadow
     selectionArea.appendChild(instructionsHeading);
     
     // Element options with keyboard keys
@@ -196,10 +232,11 @@ export function initGame() {
         elementOption.style.alignItems = 'center';
         elementOption.style.padding = '15px 25px';
         elementOption.style.borderRadius = '10px';
-        elementOption.style.backgroundColor = info.color + '33'; // Semi-transparent
+        elementOption.style.backgroundColor = info.color + '44'; // Slightly more visible
         elementOption.style.border = `2px solid ${info.color}`;
         elementOption.style.cursor = 'pointer';
         elementOption.style.transition = 'all 0.2s ease';
+        elementOption.style.boxShadow = '0 5px 15px rgba(0,0,0,0.4)'; // Add shadow by default
         
         elementOption.innerHTML = `
             <div style="font-size: 40px; margin-bottom: 5px;">${info.icon}</div>
@@ -221,7 +258,7 @@ export function initGame() {
         elementOption.addEventListener('mouseout', () => {
             elementOption.style.backgroundColor = info.color + '33';
             elementOption.style.transform = 'translateY(0)';
-            elementOption.style.boxShadow = 'none';
+            elementOption.style.boxShadow = '0 5px 15px rgba(0,0,0,0.4)'; // Keep base shadow
         });
         
         // Add click handler for element selection
@@ -233,7 +270,6 @@ export function initGame() {
                 makeChoice(element);
             }
         });
-
         
         elementOptions.appendChild(elementOption);
     });
@@ -247,6 +283,9 @@ export function initGame() {
     dualInputInstructions.style.color = '#dddddd';
     dualInputInstructions.style.marginTop = '15px';
     dualInputInstructions.style.textAlign = 'center';
+    dualInputInstructions.style.backgroundColor = 'rgba(0,0,0,0.6)'; // Add background
+    dualInputInstructions.style.padding = '8px 15px';               // Add padding
+    dualInputInstructions.style.borderRadius = '5px';               // Rounded corners
     dualInputInstructions.innerHTML = 'Choose by <b>clicking</b> the cards or using <b>keyboard keys</b>';
     selectionArea.appendChild(dualInputInstructions);
     
@@ -256,6 +295,9 @@ export function initGame() {
     escInstructions.style.color = '#aaaaaa';
     escInstructions.style.marginTop = '10px';
     escInstructions.textContent = 'Press ESC to exit the game';
+    escInstructions.style.backgroundColor = 'rgba(0,0,0,0.6)'; // Add background
+    escInstructions.style.padding = '5px 10px';               // Add padding
+    escInstructions.style.borderRadius = '5px';               // Rounded corners
     selectionArea.appendChild(escInstructions);
     
     // Create footer with exit button
@@ -273,6 +315,8 @@ export function initGame() {
     exitButton.style.fontSize = '16px';
     exitButton.style.fontWeight = 'bold';
     exitButton.style.cursor = 'pointer';
+    exitButton.style.boxShadow = '0 5px 15px rgba(0,0,0,0.5)'; // Add shadow
+    exitButton.style.textShadow = '0 1px 2px rgba(0,0,0,0.5)'; // Add text shadow
     exitButton.style.transition = 'background-color 0.2s';
     exitButton.addEventListener('mouseover', () => {
         exitButton.style.backgroundColor = '#ff7777';
@@ -283,7 +327,7 @@ export function initGame() {
     exitButton.onclick = (event) => {
         event.stopPropagation();
         document.exitPointerLock();
-        cleanupAndExit();
+        cleanupAndExitWithTransition();
     };
     
     footer.appendChild(exitButton);
@@ -322,7 +366,7 @@ function handleKeyPress(event) {
             makeChoice('fire');
             break;
         case 'ESCAPE':
-            cleanupAndExit();
+            cleanupAndExitWithTransition();
             break;
     }
 }
@@ -331,7 +375,7 @@ function handleKeyPress(event) {
  * Properly clean up and exit the game
  */
 function cleanupAndExit() {
-    // Ensure pointer lock is disabled before exiting
+    // Ensure pointer lock is disabled
     document.exitPointerLock();
     
     // Remove keyboard listener
@@ -342,12 +386,53 @@ function cleanupAndExit() {
     
     // Remove final overlay if it exists
     const finalOverlay = document.getElementById('final-overlay');
-    if (finalOverlay) {
+    if (finalOverlay && finalOverlay.parentNode) {
         document.body.removeChild(finalOverlay);
     }
     
     // Exit game
-    exitGame();
+    exitGame(false); // Use immediate exit
+}
+
+/**
+ * Clean up and exit with a smooth transition
+ */
+function cleanupAndExitWithTransition() {
+    console.log('Cleaning up and exiting with transition...');
+    
+    // Ensure pointer lock is disabled
+    document.exitPointerLock();
+    
+    // Remove keyboard listener
+    if (keyboardListener) {
+        window.removeEventListener('keydown', keyboardListener);
+        keyboardListener = null;
+    }
+    
+    // Remove final overlay if it exists
+    const finalOverlay = document.getElementById('final-overlay');
+    if (finalOverlay && finalOverlay.parentNode) {
+        document.body.removeChild(finalOverlay);
+    }
+    
+    // Remove the game UI with a fade effect
+    const gameUI = document.getElementById('game-ui');
+    if (gameUI && gameUI.parentNode) {
+        // Fade out the UI
+        gameUI.style.transition = 'opacity 0.5s';
+        gameUI.style.opacity = '0';
+        
+        setTimeout(() => {
+            if (gameUI.parentNode) {
+                document.body.removeChild(gameUI);
+            }
+            // Call exit game with transition parameter
+            exitGame(true); // Use smooth transition
+        }, 500);
+    } else {
+        // If no UI found, exit immediately
+        exitGame(true);
+    }
 }
 
 /**
@@ -367,7 +452,7 @@ function createCard(id, title) {
     card.style.flexDirection = 'column';
     card.style.alignItems = 'center';
     card.style.justifyContent = 'center';
-    card.style.backgroundColor = 'rgba(50, 50, 50, 0.7)';
+    card.style.backgroundColor = 'rgba(50, 50, 50, 0.85)'; // More opaque
     card.style.border = '2px solid rgba(255, 255, 255, 0.3)';
     card.style.boxShadow = '0 10px 20px rgba(0, 0, 0, 0.3)';
     card.style.boxSizing = 'border-box';
@@ -464,9 +549,9 @@ function makeChoice(playerElement) {
             resultDisplay.textContent = `Enemy Wins! ${elements[aiElement].description}`;
             resultDisplay.style.color = elements[aiElement].color;
 
-                // Add character animations
-                animateCharacter('player', 'lose');
-                animateCharacter('enemy', 'win');
+            // Add character animations
+            animateCharacter('player', 'lose');
+            animateCharacter('enemy', 'win');
         }
         
         // Update scoreboard
@@ -525,7 +610,7 @@ function resetRound() {
 }
 
 /**
- * Show the final result of the game
+ * Show the final result of the game with auto-exit countdown
  */
 function showFinalResult() {
     // Ensure pointer lock is disabled for final screen
@@ -574,20 +659,45 @@ function showFinalResult() {
             <span style="color: #aaa; margin: 0 15px;">:</span>
             <span style="color: #ff6600; font-weight: bold;">${gameState.aiScore}</span>
         </div>
-        <button id="play-again-btn" style="padding: 15px 30px; font-size: 20px; background-color: #ff5555; color: white; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 20px;">
-            Play Again
-        </button>
-        <button id="exit-final-btn" style="padding: 10px 20px; font-size: 16px; background-color: transparent; color: #aaa; border: 1px solid #aaa; border-radius: 5px; cursor: pointer;">
-            Exit Game
-        </button>
+        <div style="font-size: 24px; color: #aaa; margin-top: 20px; margin-bottom: 30px;">
+            Returning to game in <span id="countdown">3</span> seconds...
+        </div>
+        <div style="display: flex; gap: 20px;">
+            <button id="play-again-btn" style="padding: 15px 30px; font-size: 20px; background-color: #ff5555; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                Play Again
+            </button>
+            <button id="exit-final-btn" style="padding: 10px 20px; font-size: 16px; background-color: transparent; color: #aaa; border: 1px solid #aaa; border-radius: 5px; cursor: pointer;">
+                Exit Now
+            </button>
+        </div>
     `;
     
     document.body.appendChild(finalOverlay);
+    
+    // Set up countdown and automatic exit
+    let countdown = 3;
+    const countdownElement = document.getElementById('countdown');
+    
+    const countdownInterval = setInterval(() => {
+        countdown--;
+        if (countdownElement) {
+            countdownElement.textContent = countdown;
+        }
+        
+        if (countdown <= 0) {
+            clearInterval(countdownInterval);
+            document.exitPointerLock();
+            
+            // Start smooth transition back to player position
+            cleanupAndExitWithTransition();
+        }
+    }, 1000);
     
     // Add stopPropagation() to button clicks
     document.getElementById('play-again-btn').addEventListener('click', (event) => {
         event.stopPropagation();
         document.exitPointerLock();
+        clearInterval(countdownInterval); // Stop the countdown if user clicks
         document.body.removeChild(finalOverlay);
         resetGame();
     });
@@ -595,7 +705,8 @@ function showFinalResult() {
     document.getElementById('exit-final-btn').addEventListener('click', (event) => {
         event.stopPropagation();
         document.exitPointerLock();
-        cleanupAndExit();
+        clearInterval(countdownInterval); // Stop the countdown if user clicks
+        cleanupAndExitWithTransition();
     });
 }
 

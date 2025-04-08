@@ -1,12 +1,12 @@
 import { playerState, tableInteraction } from "./gameState.js";
 import * as THREE from "three";
 import { MOVEMENT_CONFIG } from "./config.js";
-import { initGame } from "./miniGame.js";
-import {
-  setupCharacters,
-  animateCharacter,
-  getCharacters,
+import { 
+    setupCharacters, 
+    animateCharacter, 
+    getCharacters 
 } from "./characters.js";
+import { registerExitGame, startMiniGame as managerStartMiniGame } from './gameManager.js';
 
 // Camera transition variables
 let originalCameraPosition = null;
@@ -16,6 +16,55 @@ let transitionStartTime = 0;
 let charactersSetup = false;
 const CAMERA_TRANSITION_DURATION = 1500; // 1.5 seconds
 
+// Register exit game function with the manager
+registerExitGame(function(useTransition = false) {
+  console.log(`Exit game implementation called (transition: ${useTransition})`);
+  
+  // Remove game UI if it exists
+  const gameUI = document.getElementById('game-ui');
+  if (gameUI && gameUI.parentNode) {
+    document.body.removeChild(gameUI);
+  }
+  
+  // Reset table interaction state
+  tableInteraction.canPlay = false;
+  
+  if (useTransition && originalCameraPosition && originalCameraRotation && window.gameCamera) {
+    console.log('Starting exit transition...');
+    // Setup reverse transition
+    window.gameCamera.userData = window.gameCamera.userData || {};
+    window.gameCamera.userData.transition = {
+      startPosition: window.gameCamera.position.clone(),
+      startRotation: window.gameCamera.quaternion.clone(),
+      targetPosition: originalCameraPosition.clone(),
+      targetRotation: originalCameraRotation.clone()
+    };
+    
+    // Start transition
+    isInTransition = true;
+    transitionStartTime = Date.now();
+    
+    // Reset game state after transition completes in updateCameraTransition
+  } else {
+    console.log('Immediate exit without transition');
+    // Reset game state immediately
+    playerState.inGame = false;
+    
+    // Reset camera immediately
+    if (originalCameraPosition && originalCameraRotation && window.gameCamera) {
+      window.gameCamera.position.copy(originalCameraPosition);
+      window.gameCamera.quaternion.copy(originalCameraRotation);
+    }
+    
+    // Show instructions
+    setTimeout(() => {
+      if (document.getElementById("instructions")) {
+        document.getElementById("instructions").style.display = "block";
+      }
+    }, 500);
+  }
+});
+
 /**
  * Start the game with camera transition to table
  */
@@ -23,6 +72,9 @@ export function startGame(camera, table) {
   if (window.playPrompt) {
     window.playPrompt.style.display = "none";
   }
+  
+  // Set camera reference for other modules to use
+  window.gameCamera = camera;
 
   if (!camera || !table) {
     startMiniGame();
@@ -33,7 +85,8 @@ export function startGame(camera, table) {
   if (!charactersSetup && table && table.userData && table.userData.collision) {
     // Check if characters already exist before creating new ones
     const existingCharacters = getCharacters();
-    if (!existingCharacters.enemyModel) {
+    if (!existingCharacters || !existingCharacters.enemyModel) {
+      console.log("Setting up characters at table");
       setupCharacters(camera.parent, table.userData.collision);
     }
     charactersSetup = true;
@@ -104,31 +157,57 @@ export function updateCameraTransition(camera) {
     easedProgress
   );
 
-  // Calculate rotation to look at table
-  const lookDirection = new THREE.Vector3()
-    .subVectors(transition.lookAtPoint, camera.position)
-    .normalize();
+  // If we have a target rotation, use it
+  if (transition.targetRotation) {
+    // Interpolate rotation directly
+    camera.quaternion.slerpQuaternions(
+      transition.startRotation,
+      transition.targetRotation,
+      easedProgress
+    );
+  } else {
+    // Calculate rotation to look at table
+    const rotationMatrix = new THREE.Matrix4().lookAt(
+      camera.position,
+      transition.lookAtPoint,
+      new THREE.Vector3(0, 1, 0)
+    );
 
-  const rotationMatrix = new THREE.Matrix4().lookAt(
-    camera.position,
-    transition.lookAtPoint,
-    new THREE.Vector3(0, 1, 0)
-  );
+    const targetRotation = new THREE.Quaternion().setFromRotationMatrix(
+      rotationMatrix
+    );
 
-  const targetRotation = new THREE.Quaternion().setFromRotationMatrix(
-    rotationMatrix
-  );
-
-  // Interpolate rotation
-  camera.quaternion.slerpQuaternions(
-    transition.startRotation,
-    targetRotation,
-    easedProgress
-  );
+    // Interpolate rotation
+    camera.quaternion.slerpQuaternions(
+      transition.startRotation,
+      targetRotation,
+      easedProgress
+    );
+  }
 
   // Transition complete
   if (progress >= 1.0) {
     isInTransition = false;
+    
+    // If we're exiting (can detect by checking if target is original position)
+    if (transition.targetPosition === originalCameraPosition || 
+        (transition.targetPosition && originalCameraPosition && 
+        transition.targetPosition.distanceTo(originalCameraPosition) < 0.1)) {
+      console.log("Exit transition complete");
+      playerState.inGame = false;
+      
+      // Re-enable interaction after transition completes
+      setTimeout(() => {
+        if (document.getElementById("instructions")) {
+          document.getElementById("instructions").style.display = "block";
+        }
+      }, 200);
+      
+      return false;
+    }
+    
+    // If we're entering, start the mini-game
+    console.log("Entry transition complete, starting mini-game");
     startMiniGame();
     return false;
   }
@@ -147,40 +226,11 @@ function startMiniGame() {
   playerState.inGame = true;
 
   if (charactersSetup) {
+    console.log("Setting enemy to idle animation");
     animateCharacter("enemy", "idle");
   }
 
-  // Initialize the mini-game
-  initGame();
+  // Initialize the mini-game via the manager
+  console.log("Calling mini-game initialization through manager");
+  managerStartMiniGame();
 }
-
-/**
- * Exit the game
- */
-function exitGame() {
-  // Remove game UI
-  const gameUI = document.getElementById("game-ui");
-  if (gameUI) {
-    document.body.removeChild(gameUI);
-  }
-
-  // Reset game state flags
-  playerState.inGame = false;
-
-  // Reset table interaction state
-  tableInteraction.canPlay = false;
-
-  // Reset camera position if we stored the original
-  if (originalCameraPosition && originalCameraRotation && window.gameCamera) {
-    // Teleport back to original position instead of animating
-    window.gameCamera.position.copy(originalCameraPosition);
-    window.gameCamera.quaternion.copy(originalCameraRotation);
-  }
-
-  // Re-enable interaction after a short delay
-  setTimeout(() => {
-    document.getElementById("instructions").style.display = "block";
-  }, 500);
-}
-
-export { exitGame };

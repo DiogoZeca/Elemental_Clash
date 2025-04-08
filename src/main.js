@@ -4,6 +4,7 @@ import { updateCharacterAnimations } from "./characters.js";
 
 // Import configurations
 import { SCENE_CONFIG, MOVEMENT_CONFIG, doorZ } from "./config.js";
+import './miniGame.js';
 
 // Import core modules
 import { setupBaseLighting } from "./lighting.js";
