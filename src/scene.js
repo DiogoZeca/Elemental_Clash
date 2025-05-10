@@ -24,7 +24,7 @@ export async function setupScene(scene) {
       sideWallLength: SCENE_CONFIG.roomDepth,
       useConcrete: true,
       includeFrontWall: true,
-      invisibleWalls: true
+      invisibleWalls: false  // Change this from true to false
     }).catch(err => {
       console.error('Failed to create walls:', err);
       return null;

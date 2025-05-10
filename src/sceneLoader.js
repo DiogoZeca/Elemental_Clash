@@ -36,6 +36,53 @@ function loadTexture(path, options = {}) {
 }
 
 /**
+ * Loads the brick textures (Bricks076C)
+ * @param {number} repeat - How many times to repeat the texture
+ * @returns {Promise<Object>} The loaded textures
+ */
+function loadBrickTextures(repeat = 3) {
+  const basePath = 'models/textures/Bricks076C_2K-PNG/';
+  
+  return Promise.all([
+    loadTexture(`${basePath}Bricks076C_2K-PNG_Color.png`, { repeat: [repeat, repeat] }),
+    loadTexture(`${basePath}Bricks076C_2K-PNG_NormalGL.png`, { repeat: [repeat, repeat] }),
+    loadTexture(`${basePath}Bricks076C_2K-PNG_Roughness.png`, { repeat: [repeat, repeat] }),
+    loadTexture(`${basePath}Bricks076C_2K-PNG_AmbientOcclusion.png`, { repeat: [repeat, repeat] }),
+    loadTexture(`${basePath}Bricks076C_2K-PNG_Displacement.png`, { repeat: [repeat, repeat] }),
+  ]).then(([color, normal, roughness, ao, displacement]) => {
+    return {
+      color,
+      normal,
+      roughness,
+      ao,
+      displacement
+    };
+  });
+}
+
+/**
+ * Creates a PBR material using brick textures
+ * @param {number} repeat - Texture repeat value
+ * @returns {Promise<THREE.MeshStandardMaterial>} The created material
+ */
+function createBrickMaterial(repeat = 3) {
+  return loadBrickTextures(repeat).then(textures => {
+    const material = new THREE.MeshStandardMaterial({
+      map: textures.color,
+      normalMap: textures.normal,
+      roughnessMap: textures.roughness,
+      aoMap: textures.ao,
+      displacementMap: textures.displacement,
+      displacementScale: 0.02,
+      roughness: 0.9,
+      metalness: 0.1
+    });
+    
+    return material;
+  });
+}
+
+/**
  * Loads the tiles textures (Tiles133D)
  * @returns {Promise<Object>} The loaded textures
  */
@@ -325,18 +372,33 @@ export async function createWallEnvironment(scene, options = {}) {
       wallOffset: options.wallOffset || -10,
       floorLevel: options.floorLevel || -3,
       includeFrontWall: options.includeFrontWall || true,
-      invisibleWalls: options.invisibleWalls || false
+      invisibleWalls: options.invisibleWalls || false,
+      textureRepeat: options.textureRepeat || 3 
     };
     
-    // Use fallback concrete material since we don't have concrete textures
-    const wallMaterial = createFallbackConcreteMaterial();
+    // Get brick material
+    let wallMaterial;
+    try {
+      wallMaterial = await createBrickMaterial(config.textureRepeat);
+      console.log('Using brick material for walls');
+    } catch (error) {
+      console.error('Failed to load brick material:', error);
+      wallMaterial = createFallbackConcreteMaterial();
+      console.log('Falling back to concrete material for walls');
+    }
+    
+    // Helper function to create geometry with UV2 for ambient occlusion
+    const createGeometryWithUV2 = (geometry) => {
+      geometry.setAttribute('uv2', geometry.attributes.uv.clone());
+      return geometry;
+    };
     
     // 1. BACK WALL
-    const backWallGeometry = new THREE.BoxGeometry(
+    const backWallGeometry = createGeometryWithUV2(new THREE.BoxGeometry(
       config.backWallWidth, 
       config.wallHeight, 
       config.wallDepth
-    );
+    ));
     const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
     backWall.position.set(
       0, 
@@ -348,11 +410,12 @@ export async function createWallEnvironment(scene, options = {}) {
     scene.add(backWall);
     
     // 2. LEFT SIDE WALL
-    const leftWallGeometry = new THREE.BoxGeometry(
+    const leftWallGeometry = createGeometryWithUV2(new THREE.BoxGeometry(
       config.wallDepth, 
       config.wallHeight, 
       config.sideWallLength
-    );
+    ));
+
     const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
     leftWall.position.set(
       -config.backWallWidth/2, 
@@ -364,11 +427,11 @@ export async function createWallEnvironment(scene, options = {}) {
     scene.add(leftWall);
     
     // 3. RIGHT SIDE WALL
-    const rightWallGeometry = new THREE.BoxGeometry(
+    const rightWallGeometry = createGeometryWithUV2(new THREE.BoxGeometry(
       config.wallDepth, 
       config.wallHeight, 
       config.sideWallLength
-    );
+    ));
     const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial);
     rightWall.position.set(
       config.backWallWidth/2, 
@@ -379,63 +442,93 @@ export async function createWallEnvironment(scene, options = {}) {
     rightWall.receiveShadow = true;
     scene.add(rightWall);
 
-    // 4. FRONT WALL (NEW)
+
+    // 4. FRONT WALL (FIXED TEXTURE MAPPING)
     let frontWall = null;
     if (config.includeFrontWall) {
       // Create doorway
       const doorWidth = 4;
       const doorHeight = 8;
       
-      // Left section of front wall
-      const leftFrontWallGeometry = new THREE.BoxGeometry(
-        (config.backWallWidth - doorWidth) / 2, 
-        config.wallHeight, 
-        config.wallDepth
+      // Create wall with doorway cutout using ShapeGeometry
+      const wallShape = new THREE.Shape();
+      // Define outer wall rectangle
+      wallShape.moveTo(-config.backWallWidth/2, -config.wallHeight/2);
+      wallShape.lineTo(config.backWallWidth/2, -config.wallHeight/2);
+      wallShape.lineTo(config.backWallWidth/2, config.wallHeight/2);
+      wallShape.lineTo(-config.backWallWidth/2, config.wallHeight/2);
+      wallShape.lineTo(-config.backWallWidth/2, -config.wallHeight/2);
+      
+      // Create door hole (counterclockwise)
+      const doorHole = new THREE.Path();
+      doorHole.moveTo(-doorWidth/2, -config.wallHeight/2); // Bottom left corner
+      doorHole.lineTo(doorWidth/2, -config.wallHeight/2); // Bottom right corner
+      doorHole.lineTo(doorWidth/2, doorHeight - config.wallHeight/2); // Top right corner
+      doorHole.lineTo(-doorWidth/2, doorHeight - config.wallHeight/2); // Top left corner
+      doorHole.lineTo(-doorWidth/2, -config.wallHeight/2); // Back to start
+      
+      // Add hole to shape
+      wallShape.holes.push(doorHole);
+      
+      // Create geometry with proper extrusion settings
+      const wallGeometry = new THREE.ExtrudeGeometry(wallShape, {
+        depth: config.wallDepth,
+        bevelEnabled: false
+      });
+      
+      // Fix UV mapping for consistent texture appearance
+      wallGeometry.computeVertexNormals();
+      
+      // Create a scaled material specifically for the front wall
+      const frontWallMaterial = wallMaterial.clone();
+      
+      // This creates a new material with adjusted scaling for the extruded geometry
+      frontWallMaterial.map = wallMaterial.map.clone();
+      frontWallMaterial.normalMap = wallMaterial.normalMap?.clone();
+      frontWallMaterial.roughnessMap = wallMaterial.roughnessMap?.clone();
+      frontWallMaterial.aoMap = wallMaterial.aoMap?.clone();
+      
+      // Adjust UV scaling to match the other walls
+      const uvScaleFactor = 0.07; 
+      frontWallMaterial.map.repeat.set(
+        config.textureRepeat * uvScaleFactor, 
+        config.textureRepeat * uvScaleFactor
       );
-      const leftFrontWall = new THREE.Mesh(leftFrontWallGeometry, wallMaterial);
-      leftFrontWall.position.set(
-        -(config.backWallWidth + doorWidth) / 4, 
-        config.wallHeight/2 + config.floorLevel, 
+      
+      // Apply the same scaling to other texture maps
+      if (frontWallMaterial.normalMap) {
+        frontWallMaterial.normalMap.repeat.copy(frontWallMaterial.map.repeat);
+        frontWallMaterial.normalMap.wrapS = frontWallMaterial.normalMap.wrapT = THREE.RepeatWrapping;
+      }
+      if (frontWallMaterial.roughnessMap) {
+        frontWallMaterial.roughnessMap.repeat.copy(frontWallMaterial.map.repeat);
+        frontWallMaterial.roughnessMap.wrapS = frontWallMaterial.roughnessMap.wrapT = THREE.RepeatWrapping;
+      }
+      if (frontWallMaterial.aoMap) {
+        frontWallMaterial.aoMap.repeat.copy(frontWallMaterial.map.repeat);
+        frontWallMaterial.aoMap.wrapS = frontWallMaterial.aoMap.wrapT = THREE.RepeatWrapping;
+      }
+      
+      // Create mesh with correctly positioned UVs for the material
+      const wallMesh = new THREE.Mesh(wallGeometry, frontWallMaterial);
+      
+      // FIXED POSITION: Position the wall exactly at the front edge
+      wallMesh.position.set(
+        0,
+        config.wallHeight/2 + config.floorLevel,
         config.wallOffset + config.sideWallLength
       );
-      leftFrontWall.castShadow = true;
-      leftFrontWall.receiveShadow = true;
-      scene.add(leftFrontWall);
       
-      // Right section of front wall
-      const rightFrontWallGeometry = new THREE.BoxGeometry(
-        (config.backWallWidth - doorWidth) / 2, 
-        config.wallHeight, 
-        config.wallDepth
-      );
-      const rightFrontWall = new THREE.Mesh(rightFrontWallGeometry, wallMaterial);
-      rightFrontWall.position.set(
-        (config.backWallWidth + doorWidth) / 4, 
-        config.wallHeight/2 + config.floorLevel, 
-        config.wallOffset + config.sideWallLength
-      );
-      rightFrontWall.castShadow = true;
-      rightFrontWall.receiveShadow = true;
-      scene.add(rightFrontWall);
+      // Rotate to correct orientation (normal pointing inward)
+      wallMesh.rotation.y = Math.PI;
       
-      // Top section of front wall (above door)
-      const topFrontWallGeometry = new THREE.BoxGeometry(
-        doorWidth, 
-        config.wallHeight - doorHeight, 
-        config.wallDepth
-      );
-      const topFrontWall = new THREE.Mesh(topFrontWallGeometry, wallMaterial);
-      topFrontWall.position.set(
-        0, 
-        config.floorLevel + config.wallHeight - (config.wallHeight - doorHeight) / 2, 
-        config.wallOffset + config.sideWallLength
-      );
-      topFrontWall.castShadow = true;
-      topFrontWall.receiveShadow = true;
-      scene.add(topFrontWall);
+      // Add shadow properties
+      wallMesh.castShadow = true;
+      wallMesh.receiveShadow = true;
+      scene.add(wallMesh);
       
-      frontWall = { leftFrontWall, rightFrontWall, topFrontWall };
-      console.log('Front wall with doorway created successfully');
+      frontWall = { wallMesh };
+      console.log('Front wall with doorway cutout created successfully');
     }
     
     console.log('3-wall environment created successfully');
