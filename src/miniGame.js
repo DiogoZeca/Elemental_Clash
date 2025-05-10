@@ -42,7 +42,7 @@ export function initGame() {
     gameUI.style.left = '0';
     gameUI.style.width = '100%';
     gameUI.style.height = '100%';
-    gameUI.style.backgroundColor = 'rgba(0,0,0,0.45)'; // More transparent background
+    gameUI.style.backgroundColor = 'rgba(0,0,0,0.35)';
     gameUI.style.zIndex = '200';
     gameUI.style.display = 'flex';
     gameUI.style.flexDirection = 'column';

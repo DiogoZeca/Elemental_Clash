@@ -163,16 +163,24 @@ export async function createOutsideScenery(scene, options = {}) {
       starsEnabled: options.starsEnabled !== undefined ? options.starsEnabled : true,
       cloudsEnabled: options.cloudsEnabled !== undefined ? options.cloudsEnabled : true,
       cloudsCount: options.cloudsCount || 12,
-      mountainsEnabled: options.mountainsEnabled || false
+      mountainsEnabled: options.mountainsEnabled || false,
+      groundTextureRepeat: options.groundTextureRepeat || 20
     };
     // Create dark ground
-    const groundGeometry = new THREE.PlaneGeometry(config.groundSize, config.groundSize);
-    const groundMaterial = new THREE.MeshStandardMaterial({ 
-      color: 0x0f1f18, 
-      roughness: 0.95, 
-      metalness: 0.05,
-      emissive: 0x080505,
-      emissiveIntensity: 0.1 
+    const groundGeometry = new THREE.PlaneGeometry(config.groundSize, config.groundSize, 1, 1);
+    groundGeometry.setAttribute('uv2', groundGeometry.attributes.uv.clone());
+
+    // Load ground textures
+    const groundMaterial = await createGroundMaterial(config.groundTextureRepeat)
+    .catch(err => {
+      console.warn('Failed to load ground textures, using fallback', err);
+      return new THREE.MeshStandardMaterial({ 
+        color: 0x0f1f18, 
+        roughness: 0.95, 
+        metalness: 0.05,
+        emissive: 0x080505,
+        emissiveIntensity: 0.1 
+      });
     });
 
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
@@ -188,12 +196,12 @@ export async function createOutsideScenery(scene, options = {}) {
     // Create a brighter night sky
     for (let i = 0; i < 6; i++) {
       let color;
-      if (i === 4) { // Top side
-        color = 0x4a3535;
-      } else if (i === 5) { // Bottom side
-        color = 0x3a2a2a;
-      } else { // Other sides
-        color = 0x4a3030;
+      if (i === 4) { 
+        color = 0x4a3a3a;
+      } else if (i === 5) { 
+        color = 0x4a3a3a;
+      } else { 
+        color = 0x4a3a3a;
       }
           
       skyMaterials.push(new THREE.MeshBasicMaterial({
@@ -258,6 +266,84 @@ export async function createOutsideScenery(scene, options = {}) {
     return null;
   }
 }
+
+/**
+ * Loads the ground textures (Ground068_2K)
+ * @param {number} repeat - How many times to repeat the texture
+ * @returns {Promise<Object>} The loaded textures
+ */
+function loadGroundTextures(repeat = 20) {
+  const basePath = 'models/textures/Ground068_2K-PNG/';
+  
+  return Promise.all([
+    loadTexture(`${basePath}Ground068_2K-PNG_Color.png`, { repeat: [repeat, repeat] }),
+    loadTexture(`${basePath}Ground068_2K-PNG_NormalGL.png`, { repeat: [repeat, repeat] }),
+    loadTexture(`${basePath}Ground068_2K-PNG_Roughness.png`, { repeat: [repeat, repeat] }),
+    loadTexture(`${basePath}Ground068_2K-PNG_AmbientOcclusion.png`, { repeat: [repeat, repeat] }),
+    loadTexture(`${basePath}Ground068_2K-PNG_Displacement.png`, { repeat: [repeat, repeat] }),
+  ]).then(([color, normal, roughness, ao, displacement]) => {
+    return {
+      color,
+      normal,
+      roughness,
+      ao,
+      displacement
+    };
+  });
+}
+
+/**
+ * Helper function to load textures
+ * @param {string} path - Path to the texture file
+ * @param {Object} options - Optional settings for the texture
+ * @returns {Promise<THREE.Texture>} - The loaded texture 
+ */
+function loadTexture(path, options = {}) {
+  const { repeat = [1, 1] } = options;
+  
+  const textureLoader = new THREE.TextureLoader();
+  return new Promise((resolve, reject) => {
+    textureLoader.load(
+      path,
+      (texture) => {
+        // Configure texture for proper tiling
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(repeat[0], repeat[1]);
+        
+        resolve(texture);
+      },
+      undefined,
+      (error) => reject(new Error(`Failed to load texture: ${path}, ${error}`))
+    );
+  });
+}
+
+/**
+ * Creates a PBR material using ground textures
+ * @param {number} repeat - Texture repeat value
+ * @returns {Promise<THREE.MeshStandardMaterial>} The created material
+ */
+function createGroundMaterial(repeat = 20) {
+  return loadGroundTextures(repeat).then(textures => {
+    const material = new THREE.MeshStandardMaterial({
+      map: textures.color,
+      normalMap: textures.normal,
+      roughnessMap: textures.roughness,
+      aoMap: textures.ao,
+      displacementMap: textures.displacement,
+      displacementScale: 0.2, // Subtle displacement for ground detail
+      roughness: 0.9,
+      metalness: 0.1,
+      // Tint the ground slightly to match the red moon atmosphere
+      color: 0xaa9999
+    });
+    
+    return material;
+  });
+}
+
+
 
 /**
  * Creates scattered rocks in the environment
@@ -421,51 +507,51 @@ export function createRocks(scene, options = {}) {
  * @returns {Object} - The moon mesh and its light
  */
 function createMoon(scene) {
-  const moonGeometry = new THREE.SphereGeometry(32, 32, 32);
-  const moonMaterial = new THREE.MeshStandardMaterial({
+    const moonGeometry = new THREE.SphereGeometry(32, 32, 32);
+    const moonMaterial = new THREE.MeshStandardMaterial({
     color: 0xff6666,
     emissive: 0xff7777,
     emissiveIntensity: 3.0,
     roughness: 0.2
-  });
+    });
 
-  const moon = new THREE.Mesh(moonGeometry, moonMaterial);
-  moon.position.set(40, 100, -100);
-  scene.add(moon);
+    const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+    moon.position.set(40, 100, -100);
+    scene.add(moon);
 
-  // Add a light source from the moon
-  const moonLight = new THREE.DirectionalLight(0xff4444, 5.0);
-  moonLight.position.copy(moon.position);
-  moonLight.target.position.set(0, 0, 0);
-  scene.add(moonLight);
-  scene.add(moonLight.target);
+    // Add a light source from the moon
+    const moonLight = new THREE.DirectionalLight(0xff4444, 5.0);
+    moonLight.position.copy(moon.position);
+    moonLight.target.position.set(0, 0, 0);
+    scene.add(moonLight);
+    scene.add(moonLight.target);
 
-  // Setup for shadow casting
-  moonLight.castShadow = true;
-  moonLight.shadow.mapSize.width = 4096;
-  moonLight.shadow.mapSize.height = 4096;
-  moonLight.shadow.camera.near = 10;
-  moonLight.shadow.camera.far = 350;
-  moonLight.shadow.camera.left = -150;
-  moonLight.shadow.camera.right = 150;
-  moonLight.shadow.camera.top = 150;
-  moonLight.shadow.camera.bottom = -150;
-  moonLight.shadow.bias = -0.0003;
+    // Setup for shadow casting
+    moonLight.castShadow = true;
+    moonLight.shadow.mapSize.width = 4096;
+    moonLight.shadow.mapSize.height = 4096;
+    moonLight.shadow.camera.near = 10;
+    moonLight.shadow.camera.far = 350;
+    moonLight.shadow.camera.left = -150;
+    moonLight.shadow.camera.right = 150;
+    moonLight.shadow.camera.top = 150;
+    moonLight.shadow.camera.bottom = -150;
+    moonLight.shadow.bias = -0.0003;
     
-  // Add a soft red point light for the moon's glow 
-  const moonGlow = new THREE.PointLight(0xff5555, 3.5, 350);
-  moonGlow.position.copy(moon.position);
-  scene.add(moonGlow);
+    // Add a soft red point light for the moon's glow 
+    const moonGlow = new THREE.PointLight(0xff5555, 3.5, 350);
+    moonGlow.position.copy(moon.position);
+    scene.add(moonGlow);
 
-  // Add a secondary ambient light to brighten the scene
-  const redAmbient = new THREE.HemisphereLight(0xff3333, 0x665555, 1.0);
-  scene.add(redAmbient);
-  
-  moon.moonLight = moonLight;
-  moon.moonGlow = moonGlow;
-  moon.redAmbient = redAmbient;
+    // Add a secondary ambient light to brighten the scene
+    const redAmbient = new THREE.HemisphereLight(0xff3333, 0x665555, 1.0);
+    scene.add(redAmbient);
+    
+    moon.moonLight = moonLight;
+    moon.moonGlow = moonGlow;
+    moon.redAmbient = redAmbient;
 
-  return { moon, moonLight, moonGlow, redAmbient };
+    return { moon, moonLight, moonGlow, redAmbient };
 }
 
 /**
