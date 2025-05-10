@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 // Character state
 const characterState = {
@@ -6,115 +7,121 @@ const characterState = {
   playerModel: null,
   enemyAnimations: {},
   playerAnimations: {},
+  modelLoaded: false,
 };
 
+// Create a loader for the GLTF model
+const gltfLoader = new GLTFLoader();
+
+
 /**
- * Create a simple placeholder character model
+ * Load the Among Us 3D model
+ * @param {string} type - 'enemy' or 'player'
+ * @returns {Promise<THREE.Group>} - A promise that resolves to the loaded model
+ */
+function loadAmongUsModel(type) {
+  return new Promise((resolve, reject) => {
+    const modelPath = './models/character/among_us_3d_model/scene.gltf';
+    
+    gltfLoader.load(
+      modelPath,
+      (gltf) => {
+        const model = gltf.scene;
+        
+        // Scale the model appropriately
+        model.scale.set(0.02, 0.02, 0.02);
+        
+        // Apply colors based on type
+        const color = type === "player" ? new THREE.Color(0x00ccff) : new THREE.Color(0xff4400);
+        
+        // Apply material to all meshes
+        model.traverse((node) => {
+          if (node.isMesh) {
+            // Create a new material that matches our color scheme
+            node.material = new THREE.MeshStandardMaterial({
+              color: color,
+              roughness: 0.7,
+              metalness: 0.3,
+              emissive: type === "enemy" ? color : new THREE.Color(0x000000),
+              emissiveIntensity: type === "enemy" ? 0.5 : 0.3,
+            });
+            
+            // Enable shadows
+            node.castShadow = true;
+            node.receiveShadow = true;
+          }
+        });
+        
+        resolve(model);
+      },
+      undefined,
+      (error) => {
+        console.error('Error loading Among Us model:', error);
+        reject(error);
+      }
+    );
+  });
+}
+
+
+/**
+ * Create a simple geometric character as fallback
  * @param {string} type - 'enemy' or 'player'
  * @returns {THREE.Group} - The character model
  */
 function createSimpleCharacter(type) {
-    const character = new THREE.Group();
+  const character = new THREE.Group();
   
-    // Character colors - Make enemy more vibrant and noticeable
-    const colors = {
-      player: {
-        body: 0x00ccff,
-        head: 0x66ddff,
-      },
-      enemy: {
-        body: 0xff4400,
-        head: 0xff7733,
-      },
-    };
-
-  const color = colors[type] || colors.enemy;
-
+  // Character color based on type
+  const color = type === "player" ? new THREE.Color(0x00ccff) : new THREE.Color(0xff4400);
   
-  // Create body - cylinder for the torso - make enemy slightly larger
-  const scale = type === "enemy" ? 2.0 : 1.8;
-  const bodyGeometry = new THREE.CylinderGeometry(
-    0.4 * scale,
-    0.3 * scale,
-    1.2 * scale,
-    8
-  );
+  // Create materials
   const bodyMaterial = new THREE.MeshStandardMaterial({
-    color: color.body,
+    color: color,
     roughness: 0.7,
     metalness: 0.3,
-    emissive: type === "enemy" ? color.body : 0x000000,
+    emissive: type === "enemy" ? color : new THREE.Color(0x000000),
     emissiveIntensity: type === "enemy" ? 0.5 : 0.3,
   });
-  const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-  body.position.y = 0.6 * scale;
+  
+  // Create body
+  const bodyGeom = new THREE.CapsuleGeometry(0.5, 1, 4, 8);
+  const body = new THREE.Mesh(bodyGeom, bodyMaterial);
+  body.position.y = 0.6;
+  body.castShadow = true;
   character.add(body);
-
-  // Create head - sphere
-  const headGeometry = new THREE.SphereGeometry(0.3 * scale, 24, 24);
-  const headMaterial = new THREE.MeshStandardMaterial({
-    color: color.head,
-    roughness: 0.7,
-    metalness: 0.2,
-    emissive: type === "enemy" ? color.head : 0x000000,
-    emissiveIntensity: type === "enemy" ? 0.5 : 0.3,
-  });
-  const head = new THREE.Mesh(headGeometry, headMaterial);
-  head.position.y = 1.4 * scale;
+  
+  // Create head
+  const headGeom = new THREE.SphereGeometry(0.3, 16, 16);
+  const head = new THREE.Mesh(headGeom, bodyMaterial);
+  head.position.y = 1.4;
+  head.castShadow = true;
   character.add(head);
-
+  
   // Create arms
-  const armGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.8, 8);
-  const armMaterial = bodyMaterial;
-
+  const armGeom = new THREE.CapsuleGeometry(0.15, 0.7, 4, 8);
+  
   // Left arm
-  const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+  const leftArm = new THREE.Mesh(armGeom, bodyMaterial);
   leftArm.position.set(-0.5, 0.7, 0);
   leftArm.rotation.z = Math.PI / 4;
+  leftArm.castShadow = true;
   character.add(leftArm);
-
+  
   // Right arm
-  const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+  const rightArm = new THREE.Mesh(armGeom, bodyMaterial);
   rightArm.position.set(0.5, 0.7, 0);
   rightArm.rotation.z = -Math.PI / 4;
+  rightArm.castShadow = true;
   character.add(rightArm);
-
-  // Create simple table-sitting base (half-cylinder for legs)
-  const legsGeometry = new THREE.CylinderGeometry(
-    0.4,
-    0.4,
-    0.5,
-    8,
-    1,
-    false,
-    0,
-    Math.PI
-  );
-  const legsMaterial = new THREE.MeshStandardMaterial({
-    color: color.body,
-    roughness: 0.8,
-    metalness: 0.1,
-  });
-  const legs = new THREE.Mesh(legsGeometry, legsMaterial);
-  legs.rotation.x = Math.PI / 2;
-  legs.position.set(0, 0.25, 0);
-  character.add(legs);
-
-  // Add shadows to all parts
-  character.traverse((obj) => {
-    if (obj.isMesh) {
-      obj.castShadow = true;
-      obj.receiveShadow = true;
-    }
-  });
-
-  // Store reference to body parts for animation
+  
+  // Store reference for animation
   character.userData = {
     bodyParts: {
-      body,
-      head,
-      leftArm,
-      rightArm,
+      body: body,
+      head: head,
+      leftArm: leftArm,
+      rightArm: rightArm,
     },
     animationState: {
       isIdle: true,
@@ -122,7 +129,73 @@ function createSimpleCharacter(type) {
       lastAction: "idle",
     },
   };
+  
+  // Add lights to enemy for better visibility
+  if (type === "enemy") {
+    const enemyLight = new THREE.PointLight(0xff6600, 1.5, 15);
+    enemyLight.position.set(0, 1.5, 0);
+    character.add(enemyLight);
+    
+    const accentLight = new THREE.PointLight(0xff9900, 0.8, 8);
+    accentLight.position.set(0, -1.0, 0);
+    character.add(accentLight);
+  }
+  
+  return character;
+}
 
+
+
+/**
+ * Create a character model using the Among Us 3D model
+ * @param {string} type - 'enemy' or 'player'
+ * @returns {THREE.Group} - The character model
+ */
+async function createCharacter(type) {
+  // Create a group to hold the model and any additions
+  const character = new THREE.Group();
+  
+  try {
+    // Load the Among Us model
+    const amongUsModel = await loadAmongUsModel(type);
+    
+    // Add the model to the character group
+    character.add(amongUsModel);
+    amongUsModel.position.y = 0; 
+    
+    // Add lights to enemy for better visibility
+    if (type === "enemy") {
+      const enemyLight = new THREE.PointLight(0xff6600, 1.5, 15);
+      enemyLight.position.set(0, 1.5, 0);
+      character.add(enemyLight);
+      
+      const accentLight = new THREE.PointLight(0xff9900, 0.8, 8);
+      accentLight.position.set(0, -1.0, 0);
+      character.add(accentLight);
+    }
+    
+    // Store reference for animation
+    character.userData = {
+      bodyParts: {
+        body: amongUsModel,
+        head: amongUsModel,
+        leftArm: amongUsModel,
+        rightArm: amongUsModel,
+      },
+      animationState: {
+        isIdle: true,
+        isPlaying: false,
+        lastAction: "idle",
+      },
+      amongUsModel: amongUsModel
+    };
+    
+  } catch (error) {
+    console.error("Failed to load Among Us model, falling back to simple character");
+    // Fall back to simple character if model fails to load
+    return createSimpleCharacter(type);
+  }
+  
   return character;
 }
 
@@ -148,8 +221,8 @@ function positionCharacterAtTable(character, position, tableData) {
     // Position player at the bottom side of table (closer to camera)
     character.position.set(
       tableCenter.x,
-      -1.0, // RAISED HIGHER: from -2.5 to -1.0 to be more visible
-      tableData.maxZ + 0.6 // CLOSER TO TABLE: from +1.2 to +0.6
+      -3.0, 
+      tableData.maxZ + 1.4
     );
     // Face toward the table/enemy
     character.rotation.y = Math.PI;
@@ -157,8 +230,8 @@ function positionCharacterAtTable(character, position, tableData) {
     // Position enemy at the top side of table (farther from camera)
     character.position.set(
       tableCenter.x,
-      0.0, // RAISED HIGHER: from -2.0 to 0.0 for maximum visibility
-      tableData.minZ - 1.2 // CLOSER TO TABLE: from -2.0 to -1.2
+      -3.0, 
+      tableData.minZ - 1.4 
     );
     // Face toward the table/player
     character.rotation.y = 0;
@@ -179,27 +252,81 @@ function positionCharacterAtTable(character, position, tableData) {
  * @param {THREE.Scene} scene - The scene to add characters to
  * @param {Object} tableData - Table collision data
  */
-export function setupCharacters(scene, tableData) {
+export async function setupCharacters(scene, tableData) {
   if (!scene || !tableData) {
     console.error("Cannot setup characters: missing scene or table data");
     return;
   }
 
-  // Create enemy character
-  const enemy = createSimpleCharacter("enemy");
-  positionCharacterAtTable(enemy, "enemy", tableData);
-  scene.add(enemy);
-  characterState.enemyModel = enemy;
+  try {
+    // Create enemy character with Among Us model
+    const enemy = await createCharacter("enemy");
+    positionCharacterAtTable(enemy, "enemy", tableData);
+    scene.add(enemy);
+    characterState.enemyModel = enemy;
 
-  // Create player character (optional - won't be visible from first person)
-  const player = createSimpleCharacter("player");
-  positionCharacterAtTable(player, "player", tableData);
-  scene.add(player);
-  characterState.playerModel = player;
-
-  console.log("Characters set up successfully");
+    // Create player character with Among Us model
+    const player = await createCharacter("player");
+    positionCharacterAtTable(player, "player", tableData);
+    scene.add(player);
+    characterState.playerModel = player;
+    
+    characterState.modelLoaded = true;
+    console.log("Characters with Among Us models set up successfully");
+    
+  } catch (error) {
+    console.error("Error setting up characters:", error);
+  }
+  
   return characterState;
 }
+
+/**
+ * Animate the Among Us character model
+ * @param {THREE.Group} model - The character model
+ * @param {string} action - The animation action
+ */
+function animateAmongUsModel(model, action, character) {
+  if (!model || !model.userData || !model.userData.amongUsModel) return;
+  
+  const amongUsModel = model.userData.amongUsModel;
+  
+  switch(action) {
+    case "idle":
+      // Bobbing animation
+      const bobHeight = Math.sin(Date.now() * 0.001) * 0.05;
+      amongUsModel.position.y = bobHeight;
+      amongUsModel.rotation.y = Math.sin(Date.now() * 0.002) * 0.1;
+      break;
+      
+    case "thinking":
+      // Tilt the model to simulate thinking
+      amongUsModel.rotation.z = 0.2;
+      break;
+      
+    case "playCard":
+      // Move forward slightly
+      amongUsModel.position.z = 0.2;
+      setTimeout(() => {
+        amongUsModel.position.z = 0;
+      }, 1000);
+      break;
+      
+    case "win":
+      // Jump up and spin for winning
+      amongUsModel.position.y = 0.3;
+      amongUsModel.rotation.y += 0.1;
+      break;
+      
+    case "lose":
+      // Slump down for losing
+      amongUsModel.position.y = -0.1;
+      amongUsModel.rotation.x = 0.2;
+      break;
+  }
+}
+
+
 
 /**
  * Animate character based on game state
@@ -212,7 +339,17 @@ export function animateCharacter(character, action) {
         ? characterState.playerModel
         : characterState.enemyModel;
   
-    if (!model || !model.userData || !model.userData.bodyParts) return;
+    if (!model || !model.userData) return;
+
+    // Set animation state
+    model.userData.animationState.isPlaying = true;
+    model.userData.animationState.lastAction = action;
+    
+    // Check if we're using the Among Us model
+    if (model.userData.amongUsModel) {
+      animateAmongUsModel(model, action, character);
+      return;
+    }
   
     const { body, head, leftArm, rightArm } = model.userData.bodyParts;
     const { animationState } = model.userData;

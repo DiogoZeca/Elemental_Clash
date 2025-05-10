@@ -1,0 +1,418 @@
+{
+  "accessors": [
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 32626,
+      "max": [
+        0.9885554313659668,
+        0.6958521008491516,
+        3.2994699478149414
+      ],
+      "min": [
+        -0.9124347567558289,
+        -0.6958522796630859,
+        -0.14608877897262573
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 391512,
+      "componentType": 5126,
+      "count": 32626,
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 32626,
+      "max": [
+        1.0094770193099976,
+        1.0000001192092896
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "componentType": 5125,
+      "count": 118704,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 783024,
+      "componentType": 5126,
+      "count": 3019,
+      "max": [
+        0.8016549944877625,
+        1.2257376909255981,
+        2.800617218017578
+      ],
+      "min": [
+        -0.7305534482002258,
+        -0.732073962688446,
+        0.8944318890571594
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 819252,
+      "componentType": 5126,
+      "count": 3019,
+      "max": [
+        0.9998829364776611,
+        0.9999958276748657,
+        1.0
+      ],
+      "min": [
+        -0.9998829960823059,
+        -0.9998830556869507,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 261008,
+      "componentType": 5126,
+      "count": 3019,
+      "max": [
+        0.0,
+        0.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 474816,
+      "componentType": 5125,
+      "count": 17808,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 855480,
+      "componentType": 5126,
+      "count": 801,
+      "max": [
+        0.7203712463378906,
+        -0.6169683337211609,
+        2.799940586090088
+      ],
+      "min": [
+        -0.6731667518615723,
+        -1.1899652481079102,
+        1.7867974042892456
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 865092,
+      "componentType": 5126,
+      "count": 801,
+      "max": [
+        0.9246553778648376,
+        -0.18758942186832428,
+        0.9822475910186768
+      ],
+      "min": [
+        -0.9243378639221191,
+        -0.9999958276748657,
+        -0.9152873754501343
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 285160,
+      "componentType": 5126,
+      "count": 801,
+      "max": [
+        0.0,
+        0.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 546048,
+      "componentType": 5125,
+      "count": 4608,
+      "type": "SCALAR"
+    }
+  ],
+  "asset": {
+    "extras": {
+      "author": "amnahhh (https://sketchfab.com/amnahhh)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/among-us-3d-model-673a51c3cdab4d508a8607a1df985106",
+      "title": "Among Us 3D Model"
+    },
+    "generator": "Sketchfab-12.65.0",
+    "version": "2.0"
+  },
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 564480,
+      "name": "floatBufferViews",
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 291568,
+      "byteOffset": 564480,
+      "byteStride": 8,
+      "name": "floatBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 874704,
+      "byteOffset": 856048,
+      "byteStride": 12,
+      "name": "floatBufferViews",
+      "target": 34962
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 1730752,
+      "uri": "scene.bin"
+    }
+  ],
+  "extensionsUsed": [
+    "KHR_materials_clearcoat"
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "extensions": {
+        "KHR_materials_clearcoat": {
+          "clearcoatFactor": 0.11116060027484222,
+          "clearcoatRoughnessFactor": 0.2996585754417541
+        }
+      },
+      "name": "material",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.490228,
+          0.005561689999999994,
+          0.00517895,
+          1.0
+        ],
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.8165078621897385
+      }
+    },
+    {
+      "alphaMode": "BLEND",
+      "doubleSided": true,
+      "extensions": {
+        "KHR_materials_clearcoat": {
+          "clearcoatFactor": 0.11724118011893614,
+          "clearcoatRoughnessFactor": 0.2814168359094723
+        }
+      },
+      "name": "bagpack",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.180721,
+          0.003414599999999998,
+          0.0029615299999999974,
+          0.7313797443724234
+        ],
+        "metallicFactor": 0.0
+      }
+    },
+    {
+      "doubleSided": true,
+      "name": "mask",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.0763493585748336,
+          0.18554074197515466,
+          0.2570945165330966,
+          1.0
+        ],
+        "metallicFactor": 0.34222263435041167,
+        "roughnessFactor": 0.20844987778034513
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Roundcube.006_red_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 0,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Roundcube.006_bagpack_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 5,
+            "POSITION": 4,
+            "TEXCOORD_0": 6
+          },
+          "indices": 7,
+          "material": 1,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Roundcube.006_mask_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 9,
+            "POSITION": 8,
+            "TEXCOORD_0": 10
+          },
+          "indices": 11,
+          "material": 2,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "children": [
+        1
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.220446049250313e-16,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        2.220446049250313e-16,
+        0.0,
+        0.2636096775531769,
+        -1.4352104663848877,
+        0.22166049480438202,
+        1.0
+      ],
+      "name": "Sketchfab_model"
+    },
+    {
+      "children": [
+        2
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "2802da758aa0438caba62d2faadbdbae.fbx"
+    },
+    {
+      "children": [
+        3
+      ],
+      "name": "RootNode"
+    },
+    {
+      "children": [
+        4,
+        5,
+        6
+      ],
+      "matrix": [
+        99.91145787118835,
+        -4.186759324260015,
+        0.4161229306851894,
+        0.0,
+        0.3185228722504669,
+        -2.335135551253531,
+        -99.97222456831261,
+        0.0,
+        4.195313148198345,
+        99.88502485854775,
+        -2.3197320094904494,
+        0.0,
+        -3.216805934906006,
+        15.610459327697754,
+        3.135126829147339,
+        1.0
+      ],
+      "name": "Roundcube.006"
+    },
+    {
+      "mesh": 0,
+      "name": "Roundcube.006_red_0"
+    },
+    {
+      "mesh": 1,
+      "name": "Roundcube.006_bagpack_0"
+    },
+    {
+      "mesh": 2,
+      "name": "Roundcube.006_mask_0"
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Sketchfab_Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ]
+}
