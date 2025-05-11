@@ -34,6 +34,12 @@ export function initGame() {
     // Ensure pointer lock is disabled at start
     document.exitPointerLock();
     
+    // Remove existing UI if present
+    const existingUI = document.getElementById('game-ui');
+    if (existingUI) {
+        document.body.removeChild(existingUI);
+    }
+    
     // Create game UI container with more transparency
     const gameUI = document.createElement('div');
     gameUI.id = 'game-ui';
@@ -53,7 +59,7 @@ export function initGame() {
     gameUI.style.fontFamily = '"Trebuchet MS", Arial, sans-serif';
     gameUI.style.boxSizing = 'border-box'; 
     gameUI.style.overflow = 'auto';
-    
+
     // Add click handler to prevent pointer lock on UI
     gameUI.addEventListener('click', function(event) {
         // Stop event propagation to prevent pointer lock
@@ -105,8 +111,8 @@ export function initGame() {
     
     // Add scoreboard to header
     header.appendChild(scoreboard);
+    gameUI.appendChild(header);
     
-    // NOW we can safely style everything
     header.style.backgroundColor = 'rgba(0,0,0,0.5)'; // Add background to header
     header.style.borderRadius = '10px';               // Rounded corners
     header.style.padding = '10px 20px';               // Increased padding
@@ -338,8 +344,14 @@ export function initGame() {
     
     // Reset game state
     resetGame();
+
+    animateCharacter('enemy', 'thinking');
+    animateCharacter('player', 'thinking');
     
     // Setup keyboard listener for element selection
+    if (keyboardListener) {
+        window.removeEventListener('keydown', keyboardListener);
+    }
     keyboardListener = handleKeyPress;
     window.addEventListener('keydown', keyboardListener);
     
@@ -370,6 +382,31 @@ function handleKeyPress(event) {
             break;
     }
 }
+
+
+/**
+ * Reset the round for the next battle
+ */
+function resetRound() {
+    // Ensure pointer lock remains disabled between rounds
+    document.exitPointerLock();
+    
+    // Hide results
+    const resultDisplay = document.getElementById('result-display');
+    resultDisplay.style.opacity = '0';
+    
+    // Hide cards with animation
+    document.getElementById('player-card').style.transform = 'scale(0)';
+    document.getElementById('ai-card').style.transform = 'scale(0)';
+    
+    // Reset the character animationse
+    animateCharacter('enemy', 'thinking');
+    animateCharacter('player', 'thinking');
+    
+    // Allow new selections
+    gameState.isAnimating = false;
+}
+
 
 /**
  * Properly clean up and exit the game
@@ -510,9 +547,6 @@ function makeChoice(playerElement) {
 
     // Player plays a card
     animateCharacter('player', 'playCard');
-
-    // Enemy thinks before making a choice
-    animateCharacter('enemy', 'thinking');
     
     // Animate cards appearing
     setTimeout(() => {
@@ -590,24 +624,6 @@ function updateCard(cardId, element) {
     name.style.color = elements[element].color;
 }
 
-/**
- * Reset the round for the next battle
- */
-function resetRound() {
-    // Ensure pointer lock remains disabled between rounds
-    document.exitPointerLock();
-    
-    // Hide results
-    const resultDisplay = document.getElementById('result-display');
-    resultDisplay.style.opacity = '0';
-    
-    // Hide cards with animation
-    document.getElementById('player-card').style.transform = 'scale(0)';
-    document.getElementById('ai-card').style.transform = 'scale(0)';
-    
-    // Allow new selections
-    gameState.isAnimating = false;
-}
 
 /**
  * Show the final result of the game with auto-exit countdown
