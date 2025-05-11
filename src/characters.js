@@ -285,96 +285,285 @@ function animateAmongUsModel(model, action, character, element = null) {
 
   const amongUsModel = model.userData.amongUsModel;
 
+  if (!model.userData.initialState) {
+    model.userData.initialState = {
+      position: amongUsModel.position.clone(),
+      rotation: amongUsModel.rotation.clone()
+    };
+  }
+  if (model.userData.animationTimers) {
+    model.userData.animationTimers.forEach(timer => clearTimeout(timer));
+    model.userData.animationTimers = [];
+  } else {
+    model.userData.animationTimers = [];
+  }
+
+  // Reset any particle groups or lights
+  if (model.userData.effectsGroup) {
+    model.remove(model.userData.effectsGroup);
+    delete model.userData.effectsGroup;
+  }
+
+
   switch (action) {
     case "idle":
-      // Bobbing animation
-      amongUsModel.position.y = Math.sin(Date.now() * 0.002) * 0.1;
+      // Simple bobbing - don't use Date.now() which can cause jitter
+      amongUsModel.position.x = model.userData.initialState.position.x;
+      amongUsModel.position.z = model.userData.initialState.position.z;
+      amongUsModel.rotation.x = model.userData.initialState.rotation.x;
+      amongUsModel.rotation.z = model.userData.initialState.rotation.z;
+      
+      // Gentle bounce
+      const bounceHeight = 0.1;
+      const bounceTime = 1000; // 1 second per bounce
+      
+      const startY = model.userData.initialState.position.y;
+      let startTime = Date.now();
+      
+      // Create smooth bobbing animation with requestAnimationFrame
+      const bobAnimation = () => {
+        const elapsed = Date.now() - startTime;
+        const cycle = (elapsed % bounceTime) / bounceTime;
+        
+        // Simple sine wave for smooth bobbing
+        amongUsModel.position.y = startY + Math.sin(cycle * Math.PI * 2) * bounceHeight;
+        
+        // Continue animation if this is still the current action
+        if (model.userData.animationState.lastAction === "idle") {
+          requestAnimationFrame(bobAnimation);
+        }
+      };
+      
+      requestAnimationFrame(bobAnimation);
       break;
 
     case "thinking":
-      // Tilt the model to simulate thinking
-      amongUsModel.rotation.z = Math.sin(Date.now() * 0.005) * 0.1;
+      // Reset position
+      amongUsModel.position.copy(model.userData.initialState.position);
+      amongUsModel.rotation.x = model.userData.initialState.rotation.x;
+      amongUsModel.rotation.y = model.userData.initialState.rotation.y;
+      
+      // Tilt head side to side
+      const tiltAmount = 0.15;
+      const tiltTime = 1200;
+      
+      let tiltStartTime = Date.now();
+      
+      const tiltAnimation = () => {
+        const elapsed = Date.now() - tiltStartTime;
+        const cycle = (elapsed % tiltTime) / tiltTime;
+        
+        // Smooth sine wave tilt
+        amongUsModel.rotation.z = Math.sin(cycle * Math.PI * 2) * tiltAmount;
+        
+        // Continue animation if this is still the current action
+        if (model.userData.animationState.lastAction === "thinking") {
+          requestAnimationFrame(tiltAnimation);
+        }
+      };
+      
+      requestAnimationFrame(tiltAnimation);
       break;
 
     case "playCard":
-      // Move forward slightly
-      amongUsModel.position.z = -0.2; 
-      setTimeout(() => {
-        amongUsModel.position.z = 0;
-      }, 300);
+      // Move forward in a clean motion
+      const forwardDistance = -0.4; // More pronounced movement
+      const moveTime = 300;
+      
+      // Start from original position
+      amongUsModel.position.copy(model.userData.initialState.position);
+      amongUsModel.rotation.copy(model.userData.initialState.rotation);
+      
+      const startZ = amongUsModel.position.z;
+      const moveStartTime = Date.now();
+      
+      // Smooth forward and back animation
+      const moveAnimation = () => {
+        const elapsed = Date.now() - moveStartTime;
+        
+        if (elapsed < moveTime) {
+          // Move forward (first half)
+          const progress = elapsed / moveTime;
+          amongUsModel.position.z = startZ + forwardDistance * Math.sin(progress * Math.PI);
+          requestAnimationFrame(moveAnimation);
+        } else {
+          // Reset position when done
+          amongUsModel.position.z = startZ;
+        }
+      };
+      
+      requestAnimationFrame(moveAnimation);
       break;
 
       
-    // In the animateAmongUsModel function, update the "win" case:
     case "win":
-      // Jump up and spin for winning
-      amongUsModel.rotation.y += 0.5;
+      // Create container for all effects
+      const effectsGroup = new THREE.Group();
+      model.add(effectsGroup);
+      model.userData.effectsGroup = effectsGroup;
       
-      // Add element effects if element parameter is provided
+      // Add element color light
       if (element) {
+        const elementColor = getElementColor(element);
+        
+        // Create a strong pulse light
+        const pulseLight = new THREE.PointLight(elementColor, 3, 10);
+        pulseLight.position.set(0, 2, 0);
+        effectsGroup.add(pulseLight);
+        
+        // Add fewer but more visible particles
+        const particles = new THREE.Group();
+        particles.position.y = 2.5; // Position higher above character
+        effectsGroup.add(particles);
+        
+        // Create element config
         const elementConfig = getElementConfig(element);
-        const color = getElementColor(element);
         
-      // Create a particle group
-      const particles = new THREE.Group();
-      particles.position.y = 2.5; // Position particles higher above the model
-      model.add(particles);
+        // Add initial particles - FEWER for better performance
+        for (let i = 0; i < 15; i++) {
+          const particle = createElementParticle(elementConfig);
+          
+          // Make particles LARGER and more visible
+          particle.scale.multiplyScalar(1.8);
+          particles.add(particle);
+        }
         
-      // Add initial particles
-      for (let i = 0; i < 25; i++) {
-        const particle = createElementParticle(elementConfig);
-        particles.add(particle);
-      }
-      
-      // Add light with element color
-      const light = new THREE.PointLight(color, 2.0, 15);
-      light.position.set(0, 1.5, 0); 
-      model.add(light);
-      
-      // Animate particles
-      let step = 0;
-      const particleInterval = setInterval(() => {
-        step++;
-        
-        // Update existing particles
-        particles.children.forEach((particle) => {
-          if (particle.userData) {
-            elementConfig.updateParticle(particle, step);
-            particle.userData.age++;
-            
-            if (particle.userData.age > particle.userData.maxAge) {
-              particle.material.opacity -= particle.userData.fadeRate;
-              if (particle.material.opacity <= 0) {
-                particles.remove(particle);
+        // Simplify particle animation with fewer updates
+        let step = 0;
+        const particleLoop = setInterval(() => {
+          step++;
+          
+          // Update existing particles
+          particles.children.forEach(particle => {
+            if (particle.userData) {
+              // Apply element update
+              elementConfig.updateParticle(particle, step);
+              
+              // Age particles
+              particle.userData.age++;
+              
+              // Remove old particles
+              if (particle.userData.age > particle.userData.maxAge) {
+                particle.material.opacity -= 0.1; // Faster fade
+                if (particle.material.opacity <= 0) {
+                  particles.remove(particle);
+                }
               }
             }
-          }
-        });
+          });
           
-        // Add new particles occasionally
-        if (step % 3 === 0 && step < 30) {
-          const newParticle = createElementParticle(elementConfig);
-          particles.add(newParticle);
+          // Add new particles less frequently
+          if (step % 5 === 0 && step < 20 && particles.children.length < 20) {
+            const newParticle = createElementParticle(elementConfig);
+            newParticle.scale.multiplyScalar(2.0);
+            particles.add(newParticle);
+          }
+          
+          // End animation after shorter time
+          if (step >= 30 || particles.children.length === 0) {
+            clearInterval(particleLoop);
+          }
+        }, 100); // Much slower update rate (100ms vs 30ms)
+        
+        // Store for cleanup
+        model.userData.particleLoop = particleLoop;
+      }
+      
+      // Jump and spin animation
+      const jumpHeight = 0.4;
+      const rotations = 1;
+      const animDuration = 1000;
+      
+      // Starting positions
+      const startPosY = model.userData.initialState.position.y;
+      const startRotY = model.userData.initialState.rotation.y;
+      const jumpStartTime = Date.now();
+      
+      const jumpSpinAnimation = () => {
+        const elapsed = Date.now() - jumpStartTime;
+        const progress = Math.min(elapsed / animDuration, 1.0);
+        
+        // Simple jump curve - up then down
+        if (progress < 0.5) {
+          // Going up
+          amongUsModel.position.y = startPosY + jumpHeight * (progress * 2);
+        } else {
+          // Coming down
+          amongUsModel.position.y = startPosY + jumpHeight * (2 - progress * 2);
         }
         
-        if (step >= 60) {
-          clearInterval(particleInterval);
+        // Spin around
+        amongUsModel.rotation.y = startRotY + (Math.PI * 2 * rotations * progress);
+        
+        if (progress < 1.0) {
+          requestAnimationFrame(jumpSpinAnimation);
+        } else {
+          // Reset position and rotation when done
+          amongUsModel.position.y = startPosY;
+          amongUsModel.rotation.y = startRotY;
         }
-      }, 1000/30);
+      };
       
-      // Remove after animation
-      setTimeout(() => {
-        model.remove(light);
-        model.remove(particles);
-        if (particleInterval) clearInterval(particleInterval);
-      }, 2500);
-      }
+      requestAnimationFrame(jumpSpinAnimation);
+      
+      // Clean up after animation
+      const cleanupTimer = setTimeout(() => {
+        // Remove effects
+        if (model.userData.effectsGroup) {
+          model.remove(model.userData.effectsGroup);
+          delete model.userData.effectsGroup;
+        }
+        
+        // Clear any loops
+        if (model.userData.particleLoop) {
+          clearInterval(model.userData.particleLoop);
+          delete model.userData.particleLoop;
+        }
+        
+        // Reset position and rotation
+        amongUsModel.position.copy(model.userData.initialState.position);
+        amongUsModel.rotation.copy(model.userData.initialState.rotation);
+      }, 2000);
+      
+      model.userData.animationTimers.push(cleanupTimer);
       break;
 
     case "lose":
-      // Slump down for losing
-      amongUsModel.position.y = -0.1;
-      amongUsModel.rotation.x = 0.2;
+      // Sad slump animation
+      amongUsModel.position.x = model.userData.initialState.position.x;
+      amongUsModel.position.z = model.userData.initialState.position.z;
+      
+      // Slump down and tilt forward
+      const slumpStartTime = Date.now();
+      const slumpDuration = 500;
+      
+      const startSlumpY = model.userData.initialState.position.y;
+      const startSlumpRotX = model.userData.initialState.rotation.x;
+      
+      const slumpAnimation = () => {
+        const elapsed = Date.now() - slumpStartTime;
+        const progress = Math.min(elapsed / slumpDuration, 1.0);
+        
+        // Slump down - ease in
+        amongUsModel.position.y = startSlumpY - 0.2 * (1 - Math.cos(progress * Math.PI)) / 2;
+        
+        // Tilt forward - ease in
+        amongUsModel.rotation.x = startSlumpRotX + 0.3 * (1 - Math.cos(progress * Math.PI)) / 2;
+        
+        if (progress < 1.0) {
+          requestAnimationFrame(slumpAnimation);
+        }
+      };
+      
+      requestAnimationFrame(slumpAnimation);
+      
+      // Reset after animation
+      const resetTimer = setTimeout(() => {
+        amongUsModel.position.copy(model.userData.initialState.position);
+        amongUsModel.rotation.copy(model.userData.initialState.rotation);
+      }, 2000);
+      
+      model.userData.animationTimers.push(resetTimer);
       break;
   }
 }
@@ -458,7 +647,7 @@ export function animateCharacter(character, action, element = null) {
       
       // Create particle system for element
       const particles = new THREE.Group();
-      particles.position.y = 3.0; 
+      particles.position.y = 5.0; 
       model.add(particles);
       
       // Victory pose with raised arms
@@ -619,7 +808,7 @@ export function animateCharacter(character, action, element = null) {
 function getElementColor(element) {
   switch(element) {
     case 'fire':
-      return 0xff6600;
+      return 0xff0000;
     case 'ice':
       return 0xaaddff;
     case 'water':
@@ -777,28 +966,36 @@ function getElementConfig(elementType) {
  */
 function createElementParticle(elementConfig) {
   // Much larger particles
-  const particleSize = Math.random() * 0.6 + 0.3; 
+  const particleSize = Math.random() * 0.8 + 0.2; 
   const particleGeom = elementConfig.particleGeometry(particleSize);
   
   // Create even more visible material with stronger glow
-  const particleMat = new THREE.MeshPhongMaterial({
+  const particleMat = new THREE.MeshStandardMaterial({
     color: elementConfig.color,
     emissive: elementConfig.color,
-    emissiveIntensity: 1.0, // Increased intensity
+    emissiveIntensity: 3.0, 
     transparent: true,
-    opacity: 0.95, // Higher opacity
-    shininess: 100
+    opacity: 0.8,
+    metalness: 0.3,
+    roughness: 0.4
   });
   
   const particle = new THREE.Mesh(particleGeom, particleMat);
   elementConfig.positionParticle(particle);
   
+  // Add internal point light to some particles for extra glow
+  if (Math.random() > 0.9) {
+    const pointLight = new THREE.PointLight(elementConfig.color, 0.8,4);
+    pointLight.position.set(0, 0, 0);
+    particle.add(pointLight);
+  }
+  
   particle.userData = {
     velocity: elementConfig.createVelocity(),
-    rotationSpeed: Math.random() * 0.2 - 0.1,
+    rotationSpeed: Math.random() * 0.3 - 0.15,
     fadeRate: 0.01 + Math.random() * 0.02,
     age: 0,
-    maxAge: 20 + Math.floor(Math.random() * 15)
+    maxAge: 20 + Math.floor(Math.random() * 10)
   };
   
   return particle;
