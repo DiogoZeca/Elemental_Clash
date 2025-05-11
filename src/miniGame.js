@@ -541,7 +541,7 @@ function makeChoice(playerElement) {
             resultDisplay.style.color = elements[playerElement].color;
             
             // Add character animations
-            animateCharacter('player', 'win');
+            animateCharacter('player', 'win', playerElement);
             animateCharacter('enemy', 'lose');
 
         } else if (result === 'lose') {
@@ -551,7 +551,7 @@ function makeChoice(playerElement) {
 
             // Add character animations
             animateCharacter('player', 'lose');
-            animateCharacter('enemy', 'win');
+            animateCharacter('enemy', 'win', aiElement);
         }
         
         // Update scoreboard

@@ -13,7 +13,6 @@ const characterState = {
 // Create a loader for the GLTF model
 const gltfLoader = new GLTFLoader();
 
-
 /**
  * Load the Among Us 3D model
  * @param {string} type - 'enemy' or 'player'
@@ -21,19 +20,22 @@ const gltfLoader = new GLTFLoader();
  */
 function loadAmongUsModel(type) {
   return new Promise((resolve, reject) => {
-    const modelPath = './models/character/among_us_3d_model/scene.gltf';
-    
+    const modelPath = "./models/character/among_us_3d_model/scene.gltf";
+
     gltfLoader.load(
       modelPath,
       (gltf) => {
         const model = gltf.scene;
-        
+
         // Scale the model appropriately
         model.scale.set(0.02, 0.02, 0.02);
-        
+
         // Apply colors based on type
-        const color = type === "player" ? new THREE.Color(0x00ccff) : new THREE.Color(0xff4400);
-        
+        const color =
+          type === "player"
+            ? new THREE.Color(0x00ccff)
+            : new THREE.Color(0xff4400);
+
         // Apply material to all meshes
         model.traverse((node) => {
           if (node.isMesh) {
@@ -45,24 +47,23 @@ function loadAmongUsModel(type) {
               emissive: type === "enemy" ? color : new THREE.Color(0x000000),
               emissiveIntensity: type === "enemy" ? 0.5 : 0.3,
             });
-            
+
             // Enable shadows
             node.castShadow = true;
             node.receiveShadow = true;
           }
         });
-        
+
         resolve(model);
       },
       undefined,
       (error) => {
-        console.error('Error loading Among Us model:', error);
+        console.error("Error loading Among Us model:", error);
         reject(error);
       }
     );
   });
 }
-
 
 /**
  * Create a simple geometric character as fallback
@@ -71,10 +72,11 @@ function loadAmongUsModel(type) {
  */
 function createSimpleCharacter(type) {
   const character = new THREE.Group();
-  
+
   // Character color based on type
-  const color = type === "player" ? new THREE.Color(0x00ccff) : new THREE.Color(0xff4400);
-  
+  const color =
+    type === "player" ? new THREE.Color(0x00ccff) : new THREE.Color(0xff4400);
+
   // Create materials
   const bodyMaterial = new THREE.MeshStandardMaterial({
     color: color,
@@ -83,38 +85,38 @@ function createSimpleCharacter(type) {
     emissive: type === "enemy" ? color : new THREE.Color(0x000000),
     emissiveIntensity: type === "enemy" ? 0.5 : 0.3,
   });
-  
+
   // Create body
   const bodyGeom = new THREE.CapsuleGeometry(0.5, 1, 4, 8);
   const body = new THREE.Mesh(bodyGeom, bodyMaterial);
   body.position.y = 0.6;
   body.castShadow = true;
   character.add(body);
-  
+
   // Create head
   const headGeom = new THREE.SphereGeometry(0.3, 16, 16);
   const head = new THREE.Mesh(headGeom, bodyMaterial);
   head.position.y = 1.4;
   head.castShadow = true;
   character.add(head);
-  
+
   // Create arms
   const armGeom = new THREE.CapsuleGeometry(0.15, 0.7, 4, 8);
-  
+
   // Left arm
   const leftArm = new THREE.Mesh(armGeom, bodyMaterial);
   leftArm.position.set(-0.5, 0.7, 0);
   leftArm.rotation.z = Math.PI / 4;
   leftArm.castShadow = true;
   character.add(leftArm);
-  
+
   // Right arm
   const rightArm = new THREE.Mesh(armGeom, bodyMaterial);
   rightArm.position.set(0.5, 0.7, 0);
   rightArm.rotation.z = -Math.PI / 4;
   rightArm.castShadow = true;
   character.add(rightArm);
-  
+
   // Store reference for animation
   character.userData = {
     bodyParts: {
@@ -129,22 +131,20 @@ function createSimpleCharacter(type) {
       lastAction: "idle",
     },
   };
-  
+
   // Add lights to enemy for better visibility
   if (type === "enemy") {
     const enemyLight = new THREE.PointLight(0xff6600, 1.5, 15);
     enemyLight.position.set(0, 1.5, 0);
     character.add(enemyLight);
-    
+
     const accentLight = new THREE.PointLight(0xff9900, 0.8, 8);
     accentLight.position.set(0, -1.0, 0);
     character.add(accentLight);
   }
-  
+
   return character;
 }
-
-
 
 /**
  * Create a character model using the Among Us 3D model
@@ -154,26 +154,26 @@ function createSimpleCharacter(type) {
 async function createCharacter(type) {
   // Create a group to hold the model and any additions
   const character = new THREE.Group();
-  
+
   try {
     // Load the Among Us model
     const amongUsModel = await loadAmongUsModel(type);
-    
+
     // Add the model to the character group
     character.add(amongUsModel);
-    amongUsModel.position.y = 0; 
-    
+    amongUsModel.position.y = 0;
+
     // Add lights to enemy for better visibility
     if (type === "enemy") {
       const enemyLight = new THREE.PointLight(0xff6600, 1.5, 15);
       enemyLight.position.set(0, 1.5, 0);
       character.add(enemyLight);
-      
+
       const accentLight = new THREE.PointLight(0xff9900, 0.8, 8);
       accentLight.position.set(0, -1.0, 0);
       character.add(accentLight);
     }
-    
+
     // Store reference for animation
     character.userData = {
       bodyParts: {
@@ -187,15 +187,16 @@ async function createCharacter(type) {
         isPlaying: false,
         lastAction: "idle",
       },
-      amongUsModel: amongUsModel
+      amongUsModel: amongUsModel,
     };
-    
   } catch (error) {
-    console.error("Failed to load Among Us model, falling back to simple character");
+    console.error(
+      "Failed to load Among Us model, falling back to simple character"
+    );
     // Fall back to simple character if model fails to load
     return createSimpleCharacter(type);
   }
-  
+
   return character;
 }
 
@@ -219,20 +220,12 @@ function positionCharacterAtTable(character, position, tableData) {
 
   if (position === "player") {
     // Position player at the bottom side of table (closer to camera)
-    character.position.set(
-      tableCenter.x,
-      -3.0, 
-      tableData.maxZ + 1.4
-    );
+    character.position.set(tableCenter.x, -3.0, tableData.maxZ + 1.4);
     // Face toward the table/enemy
     character.rotation.y = Math.PI;
   } else {
     // Position enemy at the top side of table (farther from camera)
-    character.position.set(
-      tableCenter.x,
-      -3.0, 
-      tableData.minZ - 1.4 
-    );
+    character.position.set(tableCenter.x, -3.0, tableData.minZ - 1.4);
     // Face toward the table/player
     character.rotation.y = 0;
 
@@ -270,14 +263,13 @@ export async function setupCharacters(scene, tableData) {
     positionCharacterAtTable(player, "player", tableData);
     scene.add(player);
     characterState.playerModel = player;
-    
+
     characterState.modelLoaded = true;
     console.log("Characters with Among Us models set up successfully");
-    
   } catch (error) {
     console.error("Error setting up characters:", error);
   }
-  
+
   return characterState;
 }
 
@@ -285,39 +277,100 @@ export async function setupCharacters(scene, tableData) {
  * Animate the Among Us character model
  * @param {THREE.Group} model - The character model
  * @param {string} action - The animation action
+ * @param {string} character - The character type ('player' or 'enemy')
+ * @param {string} element - Optional element type ('fire', 'ice', 'water')
  */
-function animateAmongUsModel(model, action, character) {
+function animateAmongUsModel(model, action, character, element = null) {
   if (!model || !model.userData || !model.userData.amongUsModel) return;
-  
+
   const amongUsModel = model.userData.amongUsModel;
-  
-  switch(action) {
+
+  switch (action) {
     case "idle":
       // Bobbing animation
-      const bobHeight = Math.sin(Date.now() * 0.001) * 0.05;
-      amongUsModel.position.y = bobHeight;
-      amongUsModel.rotation.y = Math.sin(Date.now() * 0.002) * 0.1;
+      amongUsModel.position.y = Math.sin(Date.now() * 0.002) * 0.1;
       break;
-      
+
     case "thinking":
       // Tilt the model to simulate thinking
-      amongUsModel.rotation.z = 0.2;
+      amongUsModel.rotation.z = Math.sin(Date.now() * 0.005) * 0.1;
       break;
-      
+
     case "playCard":
       // Move forward slightly
-      amongUsModel.position.z = 0.2;
+      amongUsModel.position.z = -0.2; 
       setTimeout(() => {
         amongUsModel.position.z = 0;
-      }, 1000);
+      }, 300);
       break;
+
       
+    // In the animateAmongUsModel function, update the "win" case:
     case "win":
       // Jump up and spin for winning
-      amongUsModel.position.y = 0.3;
-      amongUsModel.rotation.y += 0.1;
-      break;
+      amongUsModel.rotation.y += 0.5;
       
+      // Add element effects if element parameter is provided
+      if (element) {
+        const elementConfig = getElementConfig(element);
+        const color = getElementColor(element);
+        
+      // Create a particle group
+      const particles = new THREE.Group();
+      particles.position.y = 2.5; // Position particles higher above the model
+      model.add(particles);
+        
+      // Add initial particles
+      for (let i = 0; i < 25; i++) {
+        const particle = createElementParticle(elementConfig);
+        particles.add(particle);
+      }
+      
+      // Add light with element color
+      const light = new THREE.PointLight(color, 2.0, 15);
+      light.position.set(0, 1.5, 0); 
+      model.add(light);
+      
+      // Animate particles
+      let step = 0;
+      const particleInterval = setInterval(() => {
+        step++;
+        
+        // Update existing particles
+        particles.children.forEach((particle) => {
+          if (particle.userData) {
+            elementConfig.updateParticle(particle, step);
+            particle.userData.age++;
+            
+            if (particle.userData.age > particle.userData.maxAge) {
+              particle.material.opacity -= particle.userData.fadeRate;
+              if (particle.material.opacity <= 0) {
+                particles.remove(particle);
+              }
+            }
+          }
+        });
+          
+        // Add new particles occasionally
+        if (step % 3 === 0 && step < 30) {
+          const newParticle = createElementParticle(elementConfig);
+          particles.add(newParticle);
+        }
+        
+        if (step >= 60) {
+          clearInterval(particleInterval);
+        }
+      }, 1000/30);
+      
+      // Remove after animation
+      setTimeout(() => {
+        model.remove(light);
+        model.remove(particles);
+        if (particleInterval) clearInterval(particleInterval);
+      }, 2500);
+      }
+      break;
+
     case "lose":
       // Slump down for losing
       amongUsModel.position.y = -0.1;
@@ -326,356 +379,436 @@ function animateAmongUsModel(model, action, character) {
   }
 }
 
-
-
 /**
  * Animate character based on game state
  * @param {string} character - 'enemy' or 'player'
  * @param {string} action - Animation to play: 'idle', 'thinking', 'playCard', 'win', 'lose'
+ * @param {string} element - The element used: 'fire', 'ice', 'water' (for win/lose animations)
  */
-export function animateCharacter(character, action) {
-    const model =
-      character === "player"
-        ? characterState.playerModel
-        : characterState.enemyModel;
-  
-    if (!model || !model.userData) return;
+export function animateCharacter(character, action, element = null) {
+  const model =
+    character === "player"
+      ? characterState.playerModel
+      : characterState.enemyModel;
 
-    // Set animation state
-    model.userData.animationState.isPlaying = true;
-    model.userData.animationState.lastAction = action;
-    
-    // Check if we're using the Among Us model
-    if (model.userData.amongUsModel) {
-      animateAmongUsModel(model, action, character);
-      return;
-    }
-  
-    const { body, head, leftArm, rightArm } = model.userData.bodyParts;
-    const { animationState } = model.userData;
-  
-    // Reset any ongoing animations
-    if (animationState.isPlaying && animationState.lastAction !== action) {
-      resetCharacterPose(model);
-    }
-  
-    // Set animation state
-    animationState.isPlaying = true;
-    animationState.lastAction = action;
-  
-    // Basic animation framerate
-    const fps = 60;
-    const duration = 1000; // 1 second for complete animation
-  
-    switch (action) {
-      case "idle":
-        // More exaggerated idle animation
-        if (character === "enemy") {
-          // ENHANCED MOVEMENT: Increased animation range
-          animateBodyPart(
-            body,
-            { rotationX: Math.sin(Date.now() * 0.003) * 0.15 }, // Increased from 0.1
-            fps
-          );
-          animateBodyPart(
-            head,
-            { rotationY: Math.sin(Date.now() * 0.002) * 0.25 }, // Increased from 0.15
-            fps
-          );
-          // Higher bobbing
-          const bobHeight = Math.sin(Date.now() * 0.001) * 0.08; // Increased from 0.05
-          body.position.y = 0.6 + bobHeight;
-          head.position.y = 1.4 + bobHeight;
-        } else {
-          // Regular player idle - also enhanced
-          animateBodyPart(
-            body,
-            { rotationX: Math.sin(Date.now() * 0.003) * 0.08 }, // Increased from 0.05
-            fps
-          );
-          animateBodyPart(
-            head,
-            { rotationY: Math.sin(Date.now() * 0.002) * 0.15 }, // Increased from 0.1
-            fps
-          );
-        }
-        break;
-  
-      case "thinking":
-        // More exaggerated thinking pose
-        animateBodyPart(head, { rotationZ: 0.35 }, fps); // Increased from 0.2
-        animateBodyPart(
-          rightArm,
-          { rotationZ: -Math.PI / 2, positionY: 1.3 }, // More dramatic pose
-          fps
-        );
-        setTimeout(() => {
-          animationState.isPlaying = false;
-        }, duration);
-        break;
-  
-      case "playCard":
-        // Extend arm to play a card
-        animateBodyPart(
-          leftArm,
-          {
-            rotationZ: 0,
-            rotationX: -Math.PI / 6,
-            positionZ: 0.8,
-            positionY: 0.5,
-          },
-          fps
-        );
-        setTimeout(() => {
-          // Return arm after playing
-          animateBodyPart(
-            leftArm,
-            {
-              rotationZ: Math.PI / 4,
-              rotationX: 0,
-              positionZ: 0,
-              positionY: 0.7,
-            },
-            fps
-          );
-          animationState.isPlaying = false;
-        }, duration);
-        break;
-  
-      case "win":
-        // Victory animation with particles and effects
-        // Create victory particles
-        const victoryParticles = new THREE.Group();
-        const particleCount = 30;
+  if (!model || !model.userData) return;
+
+  // Set animation state
+  model.userData.animationState.isPlaying = true;
+  model.userData.animationState.lastAction = action;
+
+  // Check if we're using the Among Us model
+  if (model.userData.amongUsModel) {
+    animateAmongUsModel(model, action, character, element);
+    return;
+  }
+
+  const { body, head, leftArm, rightArm } = model.userData.bodyParts;
+  const { animationState } = model.userData;
+
+  // Reset any ongoing animations
+  if (animationState.isPlaying && animationState.lastAction !== action) {
+    resetCharacterPose(model);
+  }
+
+  // Set animation state
+  animationState.isPlaying = true;
+  animationState.lastAction = action;
+
+  // Basic animation framerate
+  const fps = 60;
+  const duration = 1000; // 1 second for complete animation
+
+  switch (action) {
+    case "idle":
+      // Gentle bobbing animation for idle
+      animateBodyPart(
+        body,
+        { positionY: 0.6 + Math.sin(Date.now() * 0.001) * 0.05 },
+        fps
+      );
+      animateBodyPart(
+        head,
+        { rotationZ: Math.sin(Date.now() * 0.0005) * 0.05 },
+        fps
+      );
+      break;
+
+    case "thinking":
+      // Thinking animation - head tilt and arm movement
+      animateBodyPart(head, { rotationZ: 0.2 }, fps);
+      animateBodyPart(rightArm, { rotationZ: -Math.PI / 2.5, positionY: 1.3 }, fps);
+      break;
+
+    case "playCard":
+      // Play card animation - extend arm forward
+      animateBodyPart(body, { rotationX: 0.1 }, fps);
+      animateBodyPart(rightArm, { 
+        rotationZ: -Math.PI / 3,
+        rotationX: -0.5,
+        positionY: 0.9,
+        positionZ: 0.5
+      }, fps);
+      break;
+
+    case "win":
+      // Element-specific celebration animation
+      const elementColor = element ? getElementColor(element) : 0xffffff;
+      const elementConfig = element ? getElementConfig(element) : getElementConfig('fire');
+      
+      // Create particle system for element
+      const particles = new THREE.Group();
+      particles.position.y = 3.0; 
+      model.add(particles);
+      
+      // Victory pose with raised arms
+      animateBodyPart(body, { rotationX: -0.2 }, fps);
+      animateBodyPart(head, { rotationX: -0.3, positionY: 1.6 }, fps);
+      animateBodyPart(leftArm, { 
+        rotationZ: Math.PI / 2.2, 
+        rotationY: -0.3, 
+        positionY: 1.2 
+      }, fps);
+      animateBodyPart(rightArm, { 
+        rotationZ: -Math.PI / 2.2, 
+        rotationY: 0.3, 
+        positionY: 1.2 
+      }, fps);
+      
+      // Add a simple light for the element effect
+      const victoryLight = new THREE.PointLight(elementColor, 2.0, 12);
+      victoryLight.position.set(0, 1.5, 0);
+      model.add(victoryLight);
+      
+      // Add initial particles
+      const particleCount = 35;
+      for (let i = 0; i < particleCount; i++) {
+        const particle = createElementParticle(elementConfig);
+        particles.add(particle);
+      }
+      
+      // Animate particles
+      let step = 0;
+      const particleAnimation = setInterval(() => {
+        step++;
         
-        // Add celebratory particle burst
-        for (let i = 0; i < particleCount; i++) {
-          const particleSize = Math.random() * 0.2 + 0.1;
-          const particleGeom = new THREE.SphereGeometry(particleSize, 8, 8);
-          
-          // Create glowing particle material with character's color
-          const particleMat = new THREE.MeshBasicMaterial({
-            color: character === "player" ? 0x00ccff : 0xff6600,
-            transparent: true,
-            opacity: 0.8
-          });
-          
-          const particle = new THREE.Mesh(particleGeom, particleMat);
-          
-          // Random starting position near the head
-          particle.position.set(
-            (Math.random() - 0.5) * 0.5,
-            1.5 + Math.random() * 0.5,
-            (Math.random() - 0.5) * 0.5
-          );
-          
-          // Store random trajectory for animation
-          particle.userData = {
-            velocity: new THREE.Vector3(
-              (Math.random() - 0.5) * 0.05,
-              Math.random() * 0.08,
-              (Math.random() - 0.5) * 0.05
-            ),
-            rotationSpeed: Math.random() * 0.2 - 0.1,
-            fadeRate: 0.01 + Math.random() * 0.02
-          };
-          
-          victoryParticles.add(particle);
-        }
-        model.add(victoryParticles);
-        
-        // Add victory glow effect around character
-        const glowGeom = new THREE.SphereGeometry(2, 16, 16);
-        const glowMat = new THREE.MeshBasicMaterial({
-          color: character === "player" ? 0x00ccff : 0xff6600,
-          transparent: true,
-          opacity: 0.0,
-          side: THREE.BackSide
-        });
-        const glowEffect = new THREE.Mesh(glowGeom, glowMat);
-        model.add(glowEffect);
-        
-        // Create victory light
-        const victoryLight = new THREE.PointLight(
-          character === "player" ? 0x00ccff : 0xff6600,
-          0, // Start with intensity 0
-          5
-        );
-        victoryLight.position.set(0, 1.2, 0);
-        model.add(victoryLight);
-        
-        // Dramatic victory pose with raised arms and head looking up
-        animateBodyPart(body, { rotationX: -0.2 }, fps);
-        animateBodyPart(head, { rotationX: -0.3, positionY: 1.6 }, fps);
-        animateBodyPart(leftArm, { rotationZ: Math.PI / 2.2, rotationY: -0.3, positionY: 1.2 }, fps);
-        animateBodyPart(rightArm, { rotationZ: -Math.PI / 2.2, rotationY: 0.3, positionY: 1.2 }, fps);
-        
-        // Animate particles and effects over time
-        let victoryStep = 0;
-        const victoryInterval = setInterval(() => {
-          victoryStep++;
-          
-          // Update glow effect
-          if (victoryStep < 10) {
-            glowMat.opacity += 0.04; // Fade in
-            victoryLight.intensity += 0.2; // Increase light intensity
-          } else if (victoryStep > 30) {
-            glowMat.opacity -= 0.03; // Fade out
-            victoryLight.intensity -= 0.15; // Decrease light
-          }
-          
-          // Update particles
-          victoryParticles.children.forEach(particle => {
-            // Move particle along its trajectory
-            particle.position.add(particle.userData.velocity);
+        // Update existing particles
+        particles.children.forEach((particle, index) => {
+          if (particle.userData) {
+            // Apply element-specific update
+            elementConfig.updateParticle(particle, step);
             
-            // Add gravity effect
-            particle.userData.velocity.y -= 0.002;
+            // Increase age
+            particle.userData.age++;
             
-            // Rotate particle
-            particle.rotation.x += particle.userData.rotationSpeed;
-            particle.rotation.z += particle.userData.rotationSpeed;
-            
-            // Fade out particle
-            if (particle.material.opacity > 0) {
+            // Fade out old particles
+            if (particle.userData.age > particle.userData.maxAge) {
               particle.material.opacity -= particle.userData.fadeRate;
-            }
-          });
-          
-          // End animation and clean up
-          if (victoryStep >= 45) {
-            clearInterval(victoryInterval);
-            model.remove(victoryParticles);
-            model.remove(glowEffect);
-            model.remove(victoryLight);
-            resetCharacterPose(model);
-            animationState.isPlaying = false;
-          }
-        }, 1000 / 30);
-        break;
-  
-      case "lose":
-        // Defeat animation with slumping and sad effects
-        // Create sad particles
-        const defeatParticles = new THREE.Group();
-        const sadCount = 15;
-        
-        // Add sad blue particle effect
-        for (let i = 0; i < sadCount; i++) {
-          const particleSize = Math.random() * 0.1 + 0.05;
-          const particleGeom = new THREE.SphereGeometry(particleSize, 6, 6);
-          
-          // Create blue teardrops
-          const particleMat = new THREE.MeshBasicMaterial({
-            color: 0x6688aa,
-            transparent: true,
-            opacity: 0.7
-          });
-          
-          const particle = new THREE.Mesh(particleGeom, particleMat);
-          
-          // Position around head
-          particle.position.set(
-            (Math.random() - 0.5) * 0.4,
-            1.4 - Math.random() * 0.1,
-            (Math.random() - 0.5) * 0.4
-          );
-          
-          // Store trajectory for falling tears
-          particle.userData = {
-            velocity: new THREE.Vector3(
-              (Math.random() - 0.5) * 0.01,
-              -0.03 - Math.random() * 0.02,
-              (Math.random() - 0.5) * 0.01
-            ),
-            fadeRate: 0.01 + Math.random() * 0.01,
-            delay: Math.floor(Math.random() * 20) // Staggered start
-          };
-          
-          defeatParticles.add(particle);
-        }
-        model.add(defeatParticles);
-        
-        // Create dark cloud above character
-        const cloudGroup = new THREE.Group();
-        const cloudSize = 1.2;
-        const cloudMaterial = new THREE.MeshBasicMaterial({
-          color: 0x222233,
-          transparent: true,
-          opacity: 0
-        });
-        
-        for (let i = 0; i < 5; i++) {
-          const size = (0.4 + Math.random() * 0.3) * cloudSize;
-          const cloudSphere = new THREE.SphereGeometry(size, 8, 8);
-          const cloudPart = new THREE.Mesh(cloudSphere, cloudMaterial);
-          
-          cloudPart.position.set(
-            (Math.random() - 0.5) * cloudSize,
-            2.2 + (Math.random() - 0.5) * 0.3,
-            (Math.random() - 0.5) * cloudSize
-          );
-          
-          cloudGroup.add(cloudPart);
-        }
-        model.add(cloudGroup);
-        
-        // Dramatic defeat pose - slumped with head down
-        animateBodyPart(body, { rotationX: 0.3 }, fps);
-        animateBodyPart(head, { positionY: 1.2, rotationX: 0.5 }, fps);
-        animateBodyPart(leftArm, { rotationZ: Math.PI / 8, rotationX: 0.2, positionY: 0.6 }, fps);
-        animateBodyPart(rightArm, { rotationZ: -Math.PI / 8, rotationX: 0.2, positionY: 0.6 }, fps);
-        
-        // Animate defeat effects
-        let defeatStep = 0;
-        const defeatInterval = setInterval(() => {
-          defeatStep++;
-          
-          // Fade in cloud
-          if (defeatStep < 10) {
-            cloudMaterial.opacity += 0.05;
-          }
-          
-          // Update tear particles
-          defeatParticles.children.forEach(particle => {
-            // Only start moving after delay
-            if (defeatStep > particle.userData.delay) {
-              // Move particle down
-              particle.position.add(particle.userData.velocity);
-              
-              // Fade out when too low
-              if (particle.position.y < 0.2) {
-                particle.material.opacity -= particle.userData.fadeRate * 2;
+              if (particle.material.opacity <= 0) {
+                particles.remove(particle);
               }
             }
-          });
-          
-          // Occasional cloud "rain" - spawn new tears
-          if (defeatStep % 10 === 0 && defeatStep < 30) {
-            const newTear = defeatParticles.children[0].clone();
-            newTear.position.set(
-              (Math.random() - 0.5) * 0.8,
-              1.8,
-              (Math.random() - 0.5) * 0.8
-            );
-            newTear.material = newTear.material.clone();
-            newTear.material.opacity = 0.7;
-            newTear.userData.delay = 0;
-            defeatParticles.add(newTear);
           }
-          
-          // End animation and clean up
-          if (defeatStep >= 45) {
-            clearInterval(defeatInterval);
-            model.remove(defeatParticles);
-            model.remove(cloudGroup);
-            resetCharacterPose(model);
-            animationState.isPlaying = false;
+        });
+        
+        // Add new particles occasionally for sustained effect
+        if (step % 2 === 0 && step < 40) {
+          const newParticle = createElementParticle(elementConfig);
+          particles.add(newParticle);
+        }
+        
+        // End animation eventually
+        if (step >= 70) {
+          clearInterval(particleAnimation);
+          model.remove(particles);
+        }
+      }, 1000/30); // 30 fps for particles
+      
+      // Remove light and reset after animation
+      setTimeout(() => {
+        model.remove(victoryLight);
+        resetCharacterPose(model);
+        animationState.isPlaying = false;
+        if (particleAnimation) clearInterval(particleAnimation);
+      }, 2500);
+      break;
+
+    case "lose":
+      // Sad pose for losing
+      animateBodyPart(body, { rotationX: 0.2 }, fps);
+      animateBodyPart(head, { rotationX: 0.4, positionY: 1.3 }, fps);
+      animateBodyPart(leftArm, { rotationZ: Math.PI / 6, positionY: 0.5 }, fps);
+      animateBodyPart(rightArm, { rotationZ: -Math.PI / 6, positionY: 0.5 }, fps);
+      
+      // Create a small "defeat" visual effect - gray particles falling down
+      const defeatParticles = new THREE.Group();
+      model.add(defeatParticles);
+      
+      // Add some falling dust particles
+      for (let i = 0; i < 10; i++) {
+        const size = Math.random() * 0.1 + 0.05;
+        const geometry = new THREE.SphereGeometry(size, 6, 6);
+        const material = new THREE.MeshBasicMaterial({
+          color: 0x888888,
+          transparent: true,
+          opacity: 0.6
+        });
+        
+        const particle = new THREE.Mesh(geometry, material);
+        particle.position.set(
+          (Math.random() - 0.5) * 0.8,
+          1.0 + Math.random() * 0.5,
+          (Math.random() - 0.5) * 0.8
+        );
+        
+        particle.userData = {
+          velocity: new THREE.Vector3(
+            (Math.random() - 0.5) * 0.02,
+            -0.03 - Math.random() * 0.03,
+            (Math.random() - 0.5) * 0.02
+          ),
+          age: 0,
+          maxAge: 25 + Math.floor(Math.random() * 15)
+        };
+        
+        defeatParticles.add(particle);
+      }
+      
+      // Animate the falling dust
+      let defeatStep = 0;
+      const defeatAnimation = setInterval(() => {
+        defeatStep++;
+        
+        defeatParticles.children.forEach((particle) => {
+          // Move particle downward
+          if (particle.userData) {
+            particle.position.add(particle.userData.velocity);
+            particle.userData.age++;
+            
+            // Fade out
+            if (particle.userData.age > particle.userData.maxAge) {
+              particle.material.opacity -= 0.05;
+              if (particle.material.opacity <= 0) {
+                defeatParticles.remove(particle);
+              }
+            }
           }
-        }, 1000 / 30);
-        break;
-    }
+        });
+        
+        // End animation
+        if (defeatStep >= 40) {
+          clearInterval(defeatAnimation);
+          model.remove(defeatParticles);
+        }
+      }, 1000/30);
+      
+      setTimeout(() => {
+        resetCharacterPose(model);
+        animationState.isPlaying = false;
+        if (defeatAnimation) clearInterval(defeatAnimation);
+      }, 2000);
+      break;
   }
+}
+
+/**
+ * Get color based on element type
+ * @param {string} element - The element type
+ * @return {number} The color as a hex integer
+ */
+function getElementColor(element) {
+  switch(element) {
+    case 'fire':
+      return 0xff6600;
+    case 'ice':
+      return 0xaaddff;
+    case 'water':
+      return 0x00ccff;
+    default:
+      return 0xffffff;
+  }
+}
+
+
+/**
+ * Get element-specific configuration for animations
+ * @param {string} elementType - 'fire', 'ice', or 'water'
+ * @return {Object} Configuration for the element
+ */
+function getElementConfig(elementType) {
+  switch(elementType) {
+    case 'fire':
+      return {
+        color: 0xff3300,
+        particleGeometry: (size) => {
+          // Mix of shapes for fire effect with larger size
+          return Math.random() > 0.6 ? 
+            new THREE.TetrahedronGeometry(size * 1.5) : 
+            new THREE.SphereGeometry(size, 8, 8);
+        },
+        positionParticle: (particle) => {
+          // Position around character
+          particle.position.set(
+            (Math.random() - 0.5) * 2.0, 
+            1.5 + Math.random() * 2.5,  
+            (Math.random() - 0.5) * 2.0  
+          );
+        },
+        createVelocity: () => {
+          // Upward flame-like movement
+          return new THREE.Vector3(
+            (Math.random() - 0.5) * 0.08,
+            0.05 + Math.random() * 0.12, 
+            (Math.random() - 0.5) * 0.08
+          );
+        },
+        updateParticle: (particle, step) => {
+          // Move particle along its trajectory
+          particle.position.add(particle.userData.velocity);
+          
+          // Fire flickers and rises
+          particle.userData.velocity.y -= 0.001; // Less gravity for fire
+          particle.position.x += (Math.random() - 0.5) * 0.03; // Flickering
+          
+          // Rotate for flicker effect
+          particle.rotation.x += particle.userData.rotationSpeed * 2;
+          particle.rotation.z += particle.userData.rotationSpeed * 2;
+          
+          // Pulsing size for fire effect
+          const scale = 1.0 + Math.sin(step * 0.2 + particle.position.x) * 0.2;
+          particle.scale.set(scale, scale, scale);
+        }
+      };
+      
+    case 'ice':
+      return {
+        color: 0xaaddff,
+        particleGeometry: (size) => {
+          // Crystal-like shapes for ice - larger
+          return Math.random() > 0.5 ? 
+            new THREE.OctahedronGeometry(size * 1.3) : 
+            new THREE.IcosahedronGeometry(size * 1.2);
+        },
+        positionParticle: (particle) => {
+          // Around character
+          particle.position.set(
+            (Math.random() - 0.5) * 2.5, 
+            1.5 + Math.random() * 2.0,   
+            (Math.random() - 0.5) * 2.5  
+          );
+        },
+        createVelocity: () => {
+          // Gentle floating/falling movement
+          return new THREE.Vector3(
+            (Math.random() - 0.5) * 0.04,
+            -0.01 + Math.random() * 0.05, // Some rise, some fall
+            (Math.random() - 0.5) * 0.04
+          );
+        },
+        updateParticle: (particle, step) => {
+          // Move particle along its trajectory
+          particle.position.add(particle.userData.velocity);
+          
+          // Ice particles twinkle and have slight drift
+          if (Math.random() > 0.95) {
+            // Occasional twinkle effect
+            particle.material.opacity = 0.7 + Math.random() * 0.3;
+          }
+          
+          // Gentle rotation for ice crystals
+          particle.rotation.x += particle.userData.rotationSpeed * 0.5;
+          particle.rotation.z += particle.userData.rotationSpeed * 0.5;
+          
+          // Slow, swaying movement
+          particle.position.x += Math.sin(step * 0.05 + particle.position.y * 2) * 0.01;
+        }
+      };
+      
+    case 'water':
+      default:
+        return {
+          color: 0x0088ff,
+          particleGeometry: (size) => {
+            // Larger water droplets
+            return new THREE.SphereGeometry(size * 1.2, 8, 8);
+          },
+          positionParticle: (particle) => {
+            // Position in waves around character
+            particle.position.set(
+              (Math.random() - 0.5) * 2.2, 
+              1.0 + Math.random() * 2.5, 
+              (Math.random() - 0.5) * 2.2   
+            );
+          },
+        createVelocity: () => {
+          // Wave-like movement pattern
+          return new THREE.Vector3(
+            (Math.random() - 0.5) * 0.05,
+            0.02 + Math.random() * 0.04, // Mostly rising
+            (Math.random() - 0.5) * 0.05
+          );
+        },
+        updateParticle: (particle, step) => {
+          // Move particle along its trajectory
+          particle.position.add(particle.userData.velocity);
+          
+          // Water has more gravity and wave-like movement
+          particle.userData.velocity.y -= 0.003;
+          
+          // Wave-like horizontal motion
+          particle.position.x += Math.sin(step * 0.1 + particle.position.z * 3) * 0.015;
+          
+          // Gentle rotations for water droplets
+          particle.rotation.x += particle.userData.rotationSpeed * 0.7;
+          particle.rotation.z += particle.userData.rotationSpeed * 0.7;
+          
+          // Occasional drip effect
+          if (particle.position.y < 0.5 && Math.random() > 0.96) {
+            particle.userData.velocity.y = 0.08 * Math.random(); // Small bounce
+          }
+        }
+      };
+  }
+}
+
+
+/**
+ * Create a new element-themed particle
+ */
+function createElementParticle(elementConfig) {
+  // Much larger particles
+  const particleSize = Math.random() * 0.6 + 0.3; 
+  const particleGeom = elementConfig.particleGeometry(particleSize);
+  
+  // Create even more visible material with stronger glow
+  const particleMat = new THREE.MeshPhongMaterial({
+    color: elementConfig.color,
+    emissive: elementConfig.color,
+    emissiveIntensity: 1.0, // Increased intensity
+    transparent: true,
+    opacity: 0.95, // Higher opacity
+    shininess: 100
+  });
+  
+  const particle = new THREE.Mesh(particleGeom, particleMat);
+  elementConfig.positionParticle(particle);
+  
+  particle.userData = {
+    velocity: elementConfig.createVelocity(),
+    rotationSpeed: Math.random() * 0.2 - 0.1,
+    fadeRate: 0.01 + Math.random() * 0.02,
+    age: 0,
+    maxAge: 20 + Math.floor(Math.random() * 15)
+  };
+  
+  return particle;
+}
+
+
+
+
+
+
 
 /**
  * Reset character to default pose
