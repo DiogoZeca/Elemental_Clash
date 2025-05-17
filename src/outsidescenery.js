@@ -216,7 +216,7 @@ export async function createOutsideScenery(scene, options = {}) {
     // Create objects based on enabled flags
     let moon = null;
     if (config.moonEnabled) {
-      moon = createMoon(scene);
+      moon = await createMoon(scene);
     }
     
     let stars = null;
@@ -501,22 +501,42 @@ export function createRocks(scene, options = {}) {
   return rocks;
 }
 
+
 /**
- * Creates a glowing moon that acts as the main light source
+ * Creates a 2D billboard moon that always faces the camera
  * @param {THREE.Scene} scene - The scene to add the moon to
  * @returns {Object} - The moon mesh and its light
  */
 function createMoon(scene) {
-    const moonGeometry = new THREE.SphereGeometry(32, 32, 32);
-    const moonMaterial = new THREE.MeshStandardMaterial({
-      color: 0xff6666,
-      emissive: 0xff7777,
-      emissiveIntensity: 3.0,
-      roughness: 0.2
+  return loadTexture('models/textures/moon.png').then(moonTexture => {
+    console.log('Moon texture loaded successfully');
+    
+    // Set texture properties for better quality
+    moonTexture.anisotropy = 16;
+    
+    // For a 2D moon, we use PlaneGeometry instead of SphereGeometry
+    // Make it larger than the sphere for similar visual size
+    const moonGeometry = new THREE.PlaneGeometry(60, 60);
+    
+    const moonMaterial = new THREE.MeshBasicMaterial({
+      map: moonTexture,
+      transparent: true,
+      side: THREE.DoubleSide
     });
 
     const moon = new THREE.Mesh(moonGeometry, moonMaterial);
     moon.position.set(40, 100, -100);
+    
+    // Function to make the moon always face the camera
+    const updateMoonRotation = () => {
+      if (window.gameCamera) {
+        moon.lookAt(window.gameCamera.position);
+      }
+    };
+    
+    moon.updateRotation = updateMoonRotation;
+    updateMoonRotation();
+    
     scene.add(moon);
 
     // Add a light source from the moon
@@ -538,11 +558,54 @@ function createMoon(scene) {
     moonLight.shadow.camera.bottom = -150;
     moonLight.shadow.bias = -0.0003;
     
+    // Add moon glow 
+    const moonGlow = new THREE.PointLight(0xff5555, 5.0, 500);
+    moonGlow.position.copy(moon.position);
+    scene.add(moonGlow);
+    
+    moon.moonLight = moonLight;
+    moon.moonGlow = moonGlow;
+
+    return { moon, moonLight, moonGlow };
+  }).catch(error => {
+    console.error('Failed to load moon texture:', error);
+    
+    // Fallback to a simple colored plane
+    const moonGeometry = new THREE.PlaneGeometry(60, 60);
+    const moonMaterial = new THREE.MeshBasicMaterial({
+      color: 0xff6666,
+      side: THREE.DoubleSide
+    });
+    
+    // Create the moon with fallback material
+    const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+    moon.position.set(40, 100, -100);
+    scene.add(moon);
+    
+    // Add a light source from the moon
+    const moonLight = new THREE.DirectionalLight(0xff4444, 5.0);
+    moonLight.position.copy(moon.position);
+    moonLight.target.position.set(0, 0, 0);
+    scene.add(moonLight);
+    scene.add(moonLight.target);
+    
+    // Setup for shadow casting
+    moonLight.castShadow = true;
+    moonLight.shadow.mapSize.width = 4096;
+    moonLight.shadow.mapSize.height = 4096;
+    moonLight.shadow.camera.near = 10;
+    moonLight.shadow.camera.far = 350;
+    moonLight.shadow.camera.left = -150;
+    moonLight.shadow.camera.right = 150;
+    moonLight.shadow.camera.top = 150;
+    moonLight.shadow.camera.bottom = -150;
+    moonLight.shadow.bias = -0.0003;
+    
     // Add a soft red point light for the moon's glow 
     const moonGlow = new THREE.PointLight(0xff5555, 3.5, 350);
     moonGlow.position.copy(moon.position);
     scene.add(moonGlow);
-
+    
     // Add a secondary ambient light to brighten the scene
     const redAmbient = new THREE.HemisphereLight(0xff3333, 0x665555, 1.0);
     scene.add(redAmbient);
@@ -550,9 +613,11 @@ function createMoon(scene) {
     moon.moonLight = moonLight;
     moon.moonGlow = moonGlow;
     moon.redAmbient = redAmbient;
-
+    
     return { moon, moonLight, moonGlow, redAmbient };
+  });
 }
+
 
 /**
  * Animates the moon movement across the sky

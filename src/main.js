@@ -73,7 +73,7 @@ document.body.appendChild(stats.dom);
 const { ambientLight, pointLight } = setupBaseLighting(scene);
 
 // Add foggy environment
-scene.fog = new THREE.FogExp2(0x221122, 0.008);
+scene.fog = new THREE.FogExp2(0x221122, 0.0008);
 scene.background = new THREE.Color(0x111111);
 
 // Show loading status
@@ -160,6 +160,12 @@ function animate() {
       }
 
       if (sceneObjects.outsideElements?.moon) {
+        // Add this line to make the moon face the camera every frame
+        if (sceneObjects.outsideElements.moon.moon && 
+            sceneObjects.outsideElements.moon.moon.updateRotation) {
+          sceneObjects.outsideElements.moon.moon.updateRotation();
+        }
+        
         animateMoon(sceneObjects.outsideElements.moon, time);
       }
     }
