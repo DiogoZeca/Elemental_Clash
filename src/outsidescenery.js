@@ -226,7 +226,7 @@ export async function createOutsideScenery(scene, options = {}) {
 
     let clouds = null;
     if (config.cloudsEnabled) {
-      clouds = addClouds(scene, {
+      clouds = await addClouds(scene, {
         count: config.cloudsCount,
         minHeight: 25,
         maxHeight: 50,
@@ -509,10 +509,10 @@ export function createRocks(scene, options = {}) {
 function createMoon(scene) {
     const moonGeometry = new THREE.SphereGeometry(32, 32, 32);
     const moonMaterial = new THREE.MeshStandardMaterial({
-    color: 0xff6666,
-    emissive: 0xff7777,
-    emissiveIntensity: 3.0,
-    roughness: 0.2
+      color: 0xff6666,
+      emissive: 0xff7777,
+      emissiveIntensity: 3.0,
+      roughness: 0.2
     });
 
     const moon = new THREE.Mesh(moonGeometry, moonMaterial);
@@ -663,21 +663,21 @@ function createStarTexture() {
 }
 
 /**
- * Adds dark clouds to the night sky with better separation
+ * Adds clouds to the night sky that are clearly visible
  * @param {THREE.Scene} scene - The scene to add clouds to
  * @param {Object} options - Configuration options
- * @returns {Array<THREE.Mesh>} - Array of cloud meshes
+ * @returns {Array<THREE.Group>} - Array of cloud groups
  */
-export function addClouds(scene, options = {}) {
+export async function addClouds(scene, options = {}) {
   const config = {
     count: options.count || 18,
-    minHeight: options.minHeight || 20,
-    maxHeight: options.maxHeight || 40,
-    minSize: options.minSize || 3,
-    maxSize: options.maxSize || 8,
-    spreadX: options.spreadX || 100,
-    spreadZ: options.spreadZ || 500,
-    minDistance: options.minDistance || 25
+    minHeight: options.minHeight || 18, // Lower height to be more visible
+    maxHeight: options.maxHeight || 35,
+    minSize: options.minSize || 4,     // Larger minimum size
+    maxSize: options.maxSize || 12,    // Larger maximum size
+    spreadX: options.spreadX || 80,    // Less horizontal spread to be more centralized
+    spreadZ: options.spreadZ || 200,   // Less depth spread to be more visible 
+    minDistance: options.minDistance || 20
   };
   
   const clouds = [];
@@ -711,21 +711,31 @@ export function addClouds(scene, options = {}) {
     
     const cloudGroup = new THREE.Group();
     const cloudSize = config.minSize + Math.random() * (config.maxSize - config.minSize);
-    const sphereCount = 3 + Math.floor(Math.random() * 5);
+    const sphereCount = 6 + Math.floor(Math.random() * 6); // More spheres for higher density
     
+    // Create a pure white cloud material with glow
     const cloudMaterial = new THREE.MeshStandardMaterial({
-      color: 0x222233,
-      roughness: 0.7,
-      metalness: 0,
+      color: 0xffffff,           // Pure white
+      roughness: 0.6,            // Less rough for more reflective appearance
+      metalness: 0.1,            // Slight metalness to catch light better
       transparent: true,
-      opacity: 0.9
+      opacity: 0.92,             // High opacity but still slightly transparent
+      emissive: 0xffffff,        // White emissive for full glow
+      emissiveIntensity: 0.35    // Strong enough to be visible in night
     });
+    
+    // No longer using a darker material - all clouds are pure white
+    
+    console.log(`Creating cloud at position: ${posX}, ${posY}, ${posZ} with size ${cloudSize}`);
     
     for (let j = 0; j < sphereCount; j++) {
       const size = (0.6 + Math.random() * 0.4) * cloudSize;
       const geometry = new THREE.SphereGeometry(size, 8, 8);
+      
+      // All spheres use the same white material
       const sphere = new THREE.Mesh(geometry, cloudMaterial);
       
+      // Tighter clustering of spheres
       const offsetX = (Math.random() - 0.5) * cloudSize * 1.2;
       const offsetY = (Math.random() - 0.5) * cloudSize * 0.4;
       const offsetZ = (Math.random() - 0.5) * cloudSize * 1.2;
@@ -735,7 +745,9 @@ export function addClouds(scene, options = {}) {
     }
     
     cloudGroup.userData = {
-      speed: 0.002 + Math.random() * 0.015
+      speed: 0.005 + Math.random() * 0.01, // Faster movement to be more noticeable
+      bobAmount: Math.random() * 0.002,
+      bobPhase: Math.random() * Math.PI * 2
     };
     
     cloudGroup.position.set(posX, posY, posZ);
@@ -743,20 +755,31 @@ export function addClouds(scene, options = {}) {
     clouds.push(cloudGroup);
   }
   
+  console.log(`Created ${clouds.length} clouds`);
   return clouds;
 }
 
 /**
- * Animates cloud movement
+ * Animates cloud movement with gentle bobbing for more natural feel
  * @param {Array<THREE.Group>} clouds 
  */
 export function animateClouds(clouds) {
   if (!clouds) return;
   
+  const time = Date.now() * 0.001; // Current time in seconds for wave motion
+  
   clouds.forEach(cloud => {
-    if (cloud.userData && cloud.userData.speed) {
-      cloud.position.x += cloud.userData.speed;
-      if (cloud.position.x > 100) cloud.position.x = -100;
+    if (cloud.userData) {
+      // Horizontal movement
+      if (cloud.userData.speed) {
+        cloud.position.x += cloud.userData.speed;
+        if (cloud.position.x > 100) cloud.position.x = -100;
+      }
+      
+      // Add subtle up-and-down bobbing motion
+      if (cloud.userData.bobAmount) {
+        cloud.position.y += Math.sin(time + cloud.userData.bobPhase) * cloud.userData.bobAmount;
+      }
     }
   });
 }

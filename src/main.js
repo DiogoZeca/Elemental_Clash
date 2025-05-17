@@ -233,24 +233,13 @@ async function init() {
 
 // Setup UI elements
 function setupUI() {
-  // Instructions UI
+
   window.instructions = document.createElement("div");
   instructions.id = "instructions";
-  instructions.style.position = "absolute";
-  instructions.style.top = "10px";
-  instructions.style.width = "100%";
-  instructions.style.textAlign = "center";
-  instructions.style.color = "#ffffff";
-  instructions.style.fontFamily = "Arial, sans-serif";
-  instructions.style.fontSize = "14px";
-  instructions.style.padding = "10px";
-  instructions.style.backgroundColor = "rgba(0,0,0,0.5)";
-  instructions.style.zIndex = "100";
-  instructions.innerHTML =
-    "Click to start<br>WASD = Move, SHIFT = Run, Mouse = Look";
+  instructions.style.display = "none"; // Hide it completely
   document.body.appendChild(instructions);
 
-  // Enhanced Play Game UI (initially hidden)
+  // Play Game UI 
   window.playPrompt = document.createElement("div");
   playPrompt.id = "play-prompt";
   playPrompt.style.position = "absolute";
@@ -630,12 +619,33 @@ function toggleOverlayMenu() {
   }
 }
 
-// Add a key listener for Escape key
+// Track if ESC was pressed to show pause menu
+let escPressedForPause = false;
+
+document.addEventListener('pointerlockchange', function() {
+  // If ESC was pressed and pointer is now unlocked
+  if (escPressedForPause && document.pointerLockElement === null) {
+    escPressedForPause = false; 
+    
+    // Check if we're not in the mini-game and no overlay is active
+    if (!playerState.inGame && !document.getElementById("start-overlay")) {
+      // Create pause menu
+      createStartOverlay(true);
+    }
+  }
+});
+
+// Replace the ESC key listener
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" || event.code === "Escape") {
-    // Don't process ESC if in the mini-game
     if (!playerState.inGame) {
-      toggleOverlayMenu();
+      const pointerLocked = document.pointerLockElement !== null;
+      
+      if (!pointerLocked) {
+        toggleOverlayMenu();
+      } else {
+        escPressedForPause = true;
+      }
     }
   }
 });
