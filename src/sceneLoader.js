@@ -206,14 +206,14 @@ export async function createTilesFloor(scene, options = {}) {
 }
 
 /**
- * Creates a ceiling with a simple metal-like material
+ * Creates a ceiling with the same brick texture as the walls
  * @param {THREE.Scene} scene - The scene to add the ceiling to
  * @param {Object} options - Configuration options
  * @returns {Promise<THREE.Mesh>} - The created ceiling
  */
 export async function createMetalCeiling(scene, options = {}) {
   try {
-    console.log('Creating metal textured ceiling...');
+    console.log('Creating brick textured ceiling...');
     
     // Default options
     const config = {
@@ -221,32 +221,63 @@ export async function createMetalCeiling(scene, options = {}) {
       depth: options.depth || 15,
       ceilingHeight: options.ceilingHeight || 12,
       floorLevel: options.floorLevel || -3,
-      wallOffset: options.wallOffset || -10
+      wallOffset: options.wallOffset || -10,
+      thickness: options.thickness || 0.5 
     };
     
-    // Use fallback metal material since we don't have metal textures
-    const ceilingMaterial = createFallbackMetalMaterial();
+    // Get the same brick material used for walls
+    let ceilingMaterial;
+    try {
+      // Use the same brick material as the walls with a texture repeat of 5
+      ceilingMaterial = await createBrickMaterial(5.02);
+      
+      // Make material double-sided and fully opaque
+      ceilingMaterial.side = THREE.DoubleSide;
+      ceilingMaterial.transparent = false;
+      ceilingMaterial.opacity = 1.0;
+      
+      // Lower displacement scale for ceiling
+      if (ceilingMaterial.displacementMap) {
+        ceilingMaterial.displacementScale = 0.01; // Less displacement than walls
+      }
+    } catch (error) {
+      console.error('Failed to load brick material for ceiling:', error);
+      // Fallback to metal material but make it opaque
+      ceilingMaterial = createFallbackMetalMaterial();
+      ceilingMaterial.transparent = false;
+      ceilingMaterial.opacity = 1.0;
+      ceilingMaterial.side = THREE.DoubleSide;
+    }
     
-    // Create ceiling mesh
-    const ceilingGeometry = new THREE.PlaneGeometry(config.width, config.depth);
+    // Use BoxGeometry with significant thickness to block light
+    const ceilingGeometry = new THREE.BoxGeometry(
+      config.width, 
+      config.thickness, 
+      config.depth
+    );
+    
+    // Add UV2 attribute for ambient occlusion
+    ceilingGeometry.setAttribute('uv2', ceilingGeometry.attributes.uv.clone());
+    
     const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
-    ceiling.rotation.x = Math.PI / 2; // Rotate to be horizontal, facing down
     
     // Position ceiling to align with back wall and side walls
     ceiling.position.set(
       0,
-      config.floorLevel + config.ceilingHeight,
+      config.floorLevel + config.ceilingHeight - (config.thickness/2), 
       config.wallOffset + (config.depth / 2)
     );
     
+    // Enable casting and receiving shadows
     ceiling.receiveShadow = true;
+    ceiling.castShadow = true;
     
     scene.add(ceiling);
-    console.log('Metal ceiling created successfully');
+    console.log('Brick ceiling created successfully - light blocking enabled');
     return ceiling;
     
   } catch (error) {
-    console.error('Error creating metal ceiling:', error);
+    console.error('Error creating brick ceiling:', error);
     return null;
   }
 }

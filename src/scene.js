@@ -17,7 +17,7 @@ export async function setupScene(scene) {
   
     // Load wall environment first
     const walls = await createWallEnvironment(scene, {
-      wallHeight: SCENE_CONFIG.wallHeight,  
+      wallHeight: SCENE_CONFIG.wallHeight +1,  
       floorLevel: SCENE_CONFIG.floorLevel,
       wallOffset: SCENE_CONFIG.wallOffset,
       backWallWidth: SCENE_CONFIG.roomWidth,
@@ -48,7 +48,9 @@ export async function setupScene(scene) {
       width: SCENE_CONFIG.roomWidth,
       depth: SCENE_CONFIG.roomDepth,
       floorLevel: SCENE_CONFIG.floorLevel,
-      wallOffset: SCENE_CONFIG.wallOffset
+      wallOffset: SCENE_CONFIG.wallOffset,
+      ceilingHeight: SCENE_CONFIG.wallHeight, 
+      thickness: 0.8 // Increased thickness for better light blocking
     }).catch(err => {
       console.error('Failed to create ceiling:', err);
       return null;
@@ -201,6 +203,10 @@ export function setupShadows(walls, floor, ceiling, table) {
   
   // Setup floor and ceiling shadows
   if (floor) floor.receiveShadow = true;
+  if (ceiling) {
+    ceiling.receiveShadow = true;
+    ceiling.castShadow = true;
+  }
   if (ceiling) ceiling.receiveShadow = true;
   
   // Setup table shadows
