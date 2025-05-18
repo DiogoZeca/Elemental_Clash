@@ -805,7 +805,6 @@ function createMoon(scene) {
     moonTexture.anisotropy = 16;
     
     // For a 2D moon, we use PlaneGeometry instead of SphereGeometry
-    // Make it larger than the sphere for similar visual size
     const moonGeometry = new THREE.PlaneGeometry(60, 60);
     
     const moonMaterial = new THREE.MeshBasicMaterial({
@@ -817,15 +816,7 @@ function createMoon(scene) {
     const moon = new THREE.Mesh(moonGeometry, moonMaterial);
     moon.position.set(40, 100, -100);
     
-    // Function to make the moon always face the camera
-    const updateMoonRotation = () => {
-      if (window.gameCamera) {
-        moon.lookAt(window.gameCamera.position);
-      }
-    };
-    
-    moon.updateRotation = updateMoonRotation;
-    updateMoonRotation();
+    // No need for updateRotation function - billboard always faces camera
     
     scene.add(moon);
 
@@ -858,16 +849,15 @@ function createMoon(scene) {
 
     return { moon, moonLight, moonGlow };
   }).catch(error => {
+    // Fallback implementation remains the same
     console.error('Failed to load moon texture:', error);
     
-    // Fallback to a simple colored plane
     const moonGeometry = new THREE.PlaneGeometry(60, 60);
     const moonMaterial = new THREE.MeshBasicMaterial({
       color: 0xff6666,
       side: THREE.DoubleSide
     });
     
-    // Create the moon with fallback material
     const moon = new THREE.Mesh(moonGeometry, moonMaterial);
     moon.position.set(40, 100, -100);
     scene.add(moon);
@@ -891,12 +881,10 @@ function createMoon(scene) {
     moonLight.shadow.camera.bottom = -150;
     moonLight.shadow.bias = -0.0003;
     
-    // Add a soft red point light for the moon's glow 
     const moonGlow = new THREE.PointLight(0xff5555, 3.5, 350);
     moonGlow.position.copy(moon.position);
     scene.add(moonGlow);
     
-    // Add a secondary ambient light to brighten the scene
     const redAmbient = new THREE.HemisphereLight(0xff3333, 0x665555, 1.0);
     scene.add(redAmbient);
     
@@ -910,37 +898,13 @@ function createMoon(scene) {
 
 
 /**
- * Animates the moon movement across the sky
- * @param {Object} moon - The moon object from createMoon function
- * @param {number} time - Current timestamp for animation
+ * Makes the moon always face the camera (billboard effect)
+ * @param {THREE.Mesh} moonMesh - The moon mesh
+ * @param {THREE.Camera} camera - The camera
  */
-export function animateMoon(moonObject, time = Date.now()) {
-  if (!moonObject || !moonObject.moon) return;
-  
-  const cycle = 500000; 
-  const t = (time % cycle) / cycle;
-  const oscillation = Math.sin(t * Math.PI * 2);
-  
-  const radius = 150;
-  const x = oscillation * radius;
-  const z = -100;
-  const heightVariation = 30 * (1 - (oscillation * oscillation));
-  const y = 100 + heightVariation;
-  
-  // Update positions
-  moonObject.moon.position.set(x, y, z);
-  
-  if (moonObject.moonLight) {
-    moonObject.moonLight.position.copy(moonObject.moon.position);
-  }
-  
-  if (moonObject.moonGlow) {
-    moonObject.moonGlow.position.copy(moonObject.moon.position);
-  }
-  
-  if (moonObject.moonLight && moonObject.moonLight.target) {
-    moonObject.moonLight.target.position.set(x * 0.3, 0, z * 0.3);
-  }
+export function updateMoonBillboard(moonMesh, camera) {
+  if (!moonMesh) return;
+  moonMesh.quaternion.copy(camera.quaternion);
 }
 
 /**

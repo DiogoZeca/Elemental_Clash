@@ -22,7 +22,7 @@ import {
   checkTableProximity,
   tableInteraction,
 } from "./gameState.js";
-import { animateClouds, animateMoon, createRocks } from "./outsidescenery.js";
+import { animateClouds, createRocks, updateMoonBillboard } from "./outsidescenery.js";
 import { startGame, updateCameraTransition } from "./game.js";
 
 // Setup core elements
@@ -160,13 +160,9 @@ function animate() {
       }
 
       if (sceneObjects.outsideElements?.moon) {
-        // Add this line to make the moon face the camera every frame
-        if (sceneObjects.outsideElements.moon.moon && 
-            sceneObjects.outsideElements.moon.moon.updateRotation) {
-          sceneObjects.outsideElements.moon.moon.updateRotation();
+        if (sceneObjects.outsideElements.moon.moon) {
+          updateMoonBillboard(sceneObjects.outsideElements.moon.moon, camera);
         }
-        
-        animateMoon(sceneObjects.outsideElements.moon, time);
       }
     }
 
