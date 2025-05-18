@@ -261,7 +261,6 @@ export function setupShadows(walls, floor, ceiling, table) {
     ceiling.receiveShadow = true;
     ceiling.castShadow = true;
   }
-  if (ceiling) ceiling.receiveShadow = true;
   
   // Setup table shadows
   if (table) {
