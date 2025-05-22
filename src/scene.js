@@ -5,6 +5,7 @@ import { createOutsideScenery, addClouds, createPathToEntrance } from './outside
 import { sceneObjects } from './gameState.js';
 import { setTableReference } from './physics.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { setupBaseLighting, addWallTorches } from './lighting.js';
 
 export async function setupScene(scene) {
   try {
@@ -31,6 +32,28 @@ export async function setupScene(scene) {
       return null;
     });
     console.log('Walls created successfully');
+
+
+    let torches = [];
+    if (walls) {
+      torches = await addWallTorches(scene, walls, {
+        torchCount: 6,
+        floorLevel: SCENE_CONFIG.floorLevel,
+        wallHeight: SCENE_CONFIG.wallHeight
+      }).catch(err => {
+        console.error('Failed to create wall torches:', err);
+        return [];
+      });
+      
+      if (torches.length > 0) {
+        console.log('Wall torches added successfully');
+        // Store torches in sceneObjects for animation
+        sceneObjects.torches = torches;
+      }
+    }
+
+
+
     
     // Load floor
     const floor = await createTilesFloor(scene, {
@@ -80,7 +103,6 @@ export async function setupScene(scene) {
         floorLevel: SCENE_CONFIG.floorLevel
       };
       
-       // Load the 3D wooden table model instead of creating primitives
        const gltfLoader = new GLTFLoader();
       
        // Create a promise to load the table model
@@ -88,12 +110,8 @@ export async function setupScene(scene) {
         gltfLoader.load(
           'models/scenery/wooden_table/scene.gltf',
           (gltf) => {
-            console.log('Wooden table model loaded successfully');
-            
-            // Get the table model
             const tableModel = gltf.scene;
             
-            // Apply scale if needed 
             tableModel.scale.set(6, 6, 6);
             
             // Position the table
@@ -102,21 +120,14 @@ export async function setupScene(scene) {
               config.floorLevel,
               config.positionZ
             );
-            
-            // Apply shadows to all meshes in the model
             tableModel.traverse((node) => {
               if (node.isMesh) {
                 node.castShadow = true;
                 node.receiveShadow = true;
               }
             });
-             
-            // Add the model to our table group
             table.add(tableModel);
-            
-            // Create a bounding box to get the actual dimensions
             const boundingBox = new THREE.Box3().setFromObject(tableModel);
-            
             table.userData = {
               collision: {
                 minX: boundingBox.min.x,
@@ -129,40 +140,31 @@ export async function setupScene(scene) {
             
             resolve(tableModel);
            },
-           // Progress callback
            (xhr) => {
              console.log(`Table model loading: ${(xhr.loaded / xhr.total) * 100}% loaded`);
            },
-           // Error callback
            (error) => {
              console.error('Error loading table model:', error);
              reject(error);
            }
          );
        });
- 
- 
        scene.add(table);
-
-      // Register table with physics system
       setTableReference(table);
-
       console.log('Table created successfully');
       } catch (err) {
       console.error('Failed to create table:', err);
       }
     
-    // Store outside elements
     if (outside) {
       sceneObjects.outsideElements = outside;
     }
-    
     console.log('Scene initialization complete');
-    return { walls, floor, ceiling, outside, path, table };
+    return { walls, floor, ceiling, outside, path, table, torches };
   } catch (error) {
     console.error('Error initializing scene:', error);
     // Try to return basic scene for fallback
-    return { walls: null, floor: null, ceiling: null, outside: null, path: null, table: null };
+    return { walls: null, floor: null, ceiling: null, outside: null, path: null, table: null, torches: [] };
   }
 }
 

@@ -24,6 +24,8 @@ import {
 } from "./gameState.js";
 import { animateClouds, createRocks, updateMoonBillboard } from "./outsidescenery.js";
 import { startGame, updateCameraTransition } from "./game.js";
+import { updateTorchLights } from "./lighting.js";
+
 
 // Setup core elements
 const scene = new THREE.Scene();
@@ -159,10 +161,13 @@ function animate() {
         animateClouds(sceneObjects.clouds);
       }
 
-      if (sceneObjects.outsideElements?.moon) {
-        if (sceneObjects.outsideElements.moon.moon) {
-          updateMoonBillboard(sceneObjects.outsideElements.moon.moon, camera);
-        }
+      if (sceneObjects.outsideElements?.moon?.moon) {
+        updateMoonBillboard(sceneObjects.outsideElements.moon.moon, camera);
+      }
+      
+      // Add torch flickering animation
+      if (sceneObjects.torches) {
+        updateTorchLights(sceneObjects.torches);
       }
     }
 
