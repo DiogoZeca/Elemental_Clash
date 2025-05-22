@@ -447,6 +447,7 @@ function createStartOverlay(isPause) {
       <h3 style="color: #00ccff; text-align: center; margin-top: 0;">How to Play</h3>
       <ul style="list-style-type: none; padding: 0;">
         <li style="margin-bottom: 8px;">🎮 <b>WASD</b> to move around</li>
+        <li style="margin-bottom: 8px;">⬆️ Press <b>Spacebar</b> to jump</li>
         <li style="margin-bottom: 8px;">🔍 <b>Mouse</b> to look around</li>
         <li style="margin-bottom: 8px;">🏃 Hold <b>Shift</b> to run</li>
         <li style="margin-bottom: 8px;">🎲 Find the table to start the card game</li>

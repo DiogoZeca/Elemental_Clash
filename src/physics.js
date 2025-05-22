@@ -77,7 +77,6 @@ function isCollidingWithTable(position) {
   
   const bounds = tableObject.userData.collision;
   
-  // Simple box check with small margin
   const margin = 0.3;
   return (
     position.x >= bounds.minX - margin &&

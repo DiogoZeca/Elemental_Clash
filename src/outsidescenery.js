@@ -275,7 +275,6 @@ export async function createOutsideScenery(scene, options = {}) {
       starsEnabled: options.starsEnabled !== undefined ? options.starsEnabled : true,
       cloudsEnabled: options.cloudsEnabled !== undefined ? options.cloudsEnabled : true,
       cloudsCount: options.cloudsCount || 12,
-      mountainsEnabled: options.mountainsEnabled || false,
       groundTextureRepeat: options.groundTextureRepeat || 20
     };
     // Create dark ground
@@ -364,7 +363,6 @@ export async function createOutsideScenery(scene, options = {}) {
     return {
       ground,
       skybox,
-      mountains,
       moon,
       stars,
       rocks,

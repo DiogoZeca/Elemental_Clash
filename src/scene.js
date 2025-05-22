@@ -75,51 +75,59 @@ export async function setupScene(scene) {
       table = new THREE.Group();
       
       const config = {
-        width: 17,
-        depth: 12,
-        height: 3,
         positionX: 0,
         positionZ: SCENE_CONFIG.wallOffset + SCENE_CONFIG.roomDepth * 0.5,
-        floorLevel: SCENE_CONFIG.floorLevel,
-        woodColor: 0x5c3a21,
-        legThickness: 0.6
+        floorLevel: SCENE_CONFIG.floorLevel
       };
       
        // Load the 3D wooden table model instead of creating primitives
        const gltfLoader = new GLTFLoader();
       
        // Create a promise to load the table model
-       const loadTableModel = new Promise((resolve, reject) => {
-         gltfLoader.load(
-           'models/scenery/wooden_table/scene.gltf',
-           (gltf) => {
-             console.log('Wooden table model loaded successfully');
+      await new Promise((resolve, reject) => {
+        gltfLoader.load(
+          'models/scenery/wooden_table/scene.gltf',
+          (gltf) => {
+            console.log('Wooden table model loaded successfully');
+            
+            // Get the table model
+            const tableModel = gltf.scene;
+            
+            // Apply scale if needed 
+            tableModel.scale.set(6, 6, 6);
+            
+            // Position the table
+            tableModel.position.set(
+              config.positionX,
+              config.floorLevel,
+              config.positionZ
+            );
+            
+            // Apply shadows to all meshes in the model
+            tableModel.traverse((node) => {
+              if (node.isMesh) {
+                node.castShadow = true;
+                node.receiveShadow = true;
+              }
+            });
              
-             // Get the table model
-             const tableModel = gltf.scene;
-             
-             // Apply scale if needed (adjust these values to fit your scene)
-             tableModel.scale.set(5, 5, 5);
-             
-             // Position the table
-             tableModel.position.set(
-               config.positionX,
-               config.floorLevel,
-               config.positionZ
-             );
-             
-             // Apply shadows to all meshes in the model
-             tableModel.traverse((node) => {
-               if (node.isMesh) {
-                 node.castShadow = true;
-                 node.receiveShadow = true;
-               }
-             });
-             
-             // Add the model to our table group
-             table.add(tableModel);
-             
-             resolve(tableModel);
+            // Add the model to our table group
+            table.add(tableModel);
+            
+            // Create a bounding box to get the actual dimensions
+            const boundingBox = new THREE.Box3().setFromObject(tableModel);
+            
+            table.userData = {
+              collision: {
+                minX: boundingBox.min.x,
+                maxX: boundingBox.max.x,
+                minZ: boundingBox.min.z,
+                maxZ: boundingBox.max.z
+              }
+            };
+            console.log('Table collision bounds from model:', table.userData.collision);
+            
+            resolve(tableModel);
            },
            // Progress callback
            (xhr) => {
@@ -131,81 +139,8 @@ export async function setupScene(scene) {
              reject(error);
            }
          );
-       }).catch(error => {
-         console.warn('Failed to load table model, falling back to primitive table', error);
-         
-         // Create primitive table as fallback (your existing table code)
-         const woodMaterial = new THREE.MeshStandardMaterial({
-           color: config.woodColor,
-           roughness: 0.7,
-           metalness: 0.2
-         });
-         
-         // Create table top
-         const tableTopGeometry = new THREE.BoxGeometry(
-           config.width, 
-           0.3,
-           config.depth
-         );
-         const tableTop = new THREE.Mesh(tableTopGeometry, woodMaterial);
-         tableTop.position.set(
-           config.positionX,
-           config.floorLevel + config.height,
-           config.positionZ
-         );
-         tableTop.castShadow = true;
-         tableTop.receiveShadow = true;
-         table.add(tableTop);
-         
-         // Create table legs (4 legs at corners)
-         const legPositions = [
-           // Front left
-           {x: config.positionX - config.width/2 + config.legThickness/2, 
-           z: config.positionZ - config.depth/2 + config.legThickness/2},
-           // Front right
-           {x: config.positionX + config.width/2 - config.legThickness/2, 
-           z: config.positionZ - config.depth/2 + config.legThickness/2},
-           // Back left
-           {x: config.positionX - config.width/2 + config.legThickness/2, 
-           z: config.positionZ + config.depth/2 - config.legThickness/2},
-           // Back right
-           {x: config.positionX + config.width/2 - config.legThickness/2, 
-           z: config.positionZ + config.depth/2 - config.legThickness/2}
-         ];
- 
-         // Create each leg
-         legPositions.forEach(pos => {
-           const legGeometry = new THREE.BoxGeometry(
-             config.legThickness,
-             config.height,
-             config.legThickness
-           );
-           
-           const leg = new THREE.Mesh(legGeometry, woodMaterial);
-           leg.position.set(
-             pos.x,
-             config.floorLevel + config.height/2,
-             pos.z
-           );
-           leg.castShadow = true;
-           leg.receiveShadow = true;
-           table.add(leg);
-         });
        });
-       
-       // Wait for the model to load or fallback to complete
-       await loadTableModel;
  
-       // Keep the same collision boundaries for game logic
-       table.userData = {
-         collision: {
-           minX: config.positionX - config.width/2,
-           maxX: config.positionX + config.width/2,
-           minZ: config.positionZ - config.depth/2,
-           maxZ: config.positionZ + config.depth/2
-         }
-       };
-       console.log('Table collision bounds:', table.userData.collision);
  
        scene.add(table);
 
