@@ -1,17 +1,30 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
+// Add performance configuration object
+export const LIGHTING_PERFORMANCE = {
+  enabled: true,         // Enable performance mode by default
+  updateFrequency: 3,    // Only update every N frames (higher = better performance)
+  disableShadows: false, // Option to completely disable shadows
+  maxActiveTorches: 3,   // Limit number of active torches
+  torchLOD: true         // Enable torch LOD (Level of Detail)
+};
+
 export function setupBaseLighting(scene) {
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    // Reduced ambient light intensity to allow torch lights to be more visible
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); 
     scene.add(ambientLight);
   
-    const pointLight = new THREE.PointLight(0xffeedd, 0.9); 
+    const pointLight = new THREE.PointLight(0xffeedd, 0.7); // Reduced intensity
     pointLight.position.set(0, 2, -1);
-    pointLight.castShadow = true;
-    pointLight.shadow.mapSize.width = 1024; 
-    pointLight.shadow.mapSize.height = 1024;
-    pointLight.shadow.camera.near = 0.5;
-    pointLight.shadow.camera.far = 20;
+    pointLight.castShadow = !LIGHTING_PERFORMANCE.disableShadows;
+    
+    if (pointLight.castShadow) {
+      pointLight.shadow.mapSize.width = 512;  // Reduced from 1024
+      pointLight.shadow.mapSize.height = 512; // Reduced from 1024
+      pointLight.shadow.camera.near = 0.5;
+      pointLight.shadow.camera.far = 20;
+    }
     
     scene.add(pointLight);
     
@@ -31,12 +44,16 @@ export async function addWallTorches(scene, walls, options = {}) {
     return [];
   }
 
+  // Include performance mode in config
+  const performanceMode = LIGHTING_PERFORMANCE.enabled || options.performanceMode || (window.devicePixelRatio < 2);
+  const torchCount = Math.min(options.torchCount || 3, LIGHTING_PERFORMANCE.maxActiveTorches);
+  
   const config = {
     torchScale: options.torchScale || 3.0, 
-    torchCount: 3,
-    lightIntensity: options.lightIntensity || 8.0, 
+    torchCount: torchCount,
+    lightIntensity: performanceMode ? 6.0 : 8.0, // Reduced intensity in performance mode
     lightColor: options.lightColor || 0xff5500,
-    lightDistance: options.lightDistance || 20, 
+    lightDistance: options.lightDistance || 15,  // Reduced from 20
     flickerIntensity: options.flickerIntensity || 0.5,
     wallHeight: options.wallHeight || 7,
     floorLevel: options.floorLevel || -3
@@ -53,7 +70,6 @@ export async function addWallTorches(scene, walls, options = {}) {
     wallThickness: 0.2,
     wallHeight: options.wallHeight || 7
   };
-  console.log('Using wall positions:', wallDetails);
   
   const torchPositions = [
     // Left wall torch (centered)
@@ -91,10 +107,33 @@ export async function addWallTorches(scene, walls, options = {}) {
     }
   ];
 
-  const performanceMode = options.performanceMode || (window.devicePixelRatio < 2) || true;
+  // Create shared geometries for all torches to reduce memory and improve performance
+  const flameGeometry = new THREE.SphereGeometry(
+    0.1, 
+    performanceMode ? 4 : 8,  // Reduced polygon count
+    performanceMode ? 3 : 6   // Reduced polygon count
+  );
+  
+  const glowGeometry = new THREE.SphereGeometry(
+    0.2, 
+    performanceMode ? 6 : 10,
+    performanceMode ? 4 : 6
+  );
+  
+  // Create shared materials for all torches
+  const flameMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff2200, 
+    transparent: true,
+    opacity: 0.9,
+  });
+  
+  const glowMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff5500,
+    transparent: true,
+    opacity: 0.4,
+  });
 
-  const shadowMapSize = performanceMode ? 512 : 1024;
-
+  const shadowMapSize = performanceMode ? 256 : 512; // Further reduced shadow resolution
 
   try {
     const gltfLoader = new GLTFLoader();
@@ -111,8 +150,6 @@ export async function addWallTorches(scene, walls, options = {}) {
       );
     });
     
-    console.log('Torch models loaded successfully');
-
     // Create and position each torch
     torchPositions.forEach((torchInfo, index) => {
       if (index >= config.torchCount) return; 
@@ -131,8 +168,6 @@ export async function addWallTorches(scene, walls, options = {}) {
       const modelSize = new THREE.Vector3();
       bbox.getSize(modelSize);
       
-      console.log(`Torch ${index} dimensions:`, modelSize);
-
       const adjustedEmbedDepth = Math.min(torchInfo.embedDepth, modelSize.x * 0.3);
       const torchOffset = new THREE.Vector3()
         .copy(torchInfo.wallDirection)
@@ -140,81 +175,64 @@ export async function addWallTorches(scene, walls, options = {}) {
         
       torch.position.add(torchOffset);
 
-      // Add point light to torch
+      // Add point light to torch - FIXED position relative to torch
       const light = new THREE.PointLight(
         config.lightColor,
         config.lightIntensity,
         config.lightDistance
       );
 
-      light.position.set(0.3, 0.7, 0);
+      // This position looks more centered in the torch (from your screenshots)
+      light.position.set(0.3, 1, 0);
       
+      // Only enable shadows if not in performance/disable mode
+      const useShadows = !performanceMode && !LIGHTING_PERFORMANCE.disableShadows;
+      light.castShadow = useShadows;
       
-      // Configure shadow properties
-      light.castShadow = !performanceMode; 
       if (light.castShadow) {
         light.shadow.mapSize.width = shadowMapSize;
         light.shadow.mapSize.height = shadowMapSize;
         light.shadow.camera.near = 0.5;
         light.shadow.camera.far = 15; 
         light.shadow.bias = -0.002;
-        light.shadow.normalBias = 0.02;
-        light.shadow.radius = 1.0; 
+        // Remove expensive settings
+        light.shadow.normalBias = 0;
+        light.shadow.radius = 1.0;
       }
       
       light.userData.originalIntensity = config.lightIntensity;
       light.userData.flickering = true;
       light.userData.lastFlicker = 0;
+      light.userData.index = index; // Add an index to only update certain torches each frame
       
       torch.add(light);
       scene.add(torch);
 
-      const torchAmbient = new THREE.PointLight(0xff2200, 2.0, 2.0);
+      // The ambient light is crucial for the glow effect
+      const torchAmbient = new THREE.PointLight(0xff2200, 1.5, 2.0); // Reduced intensity
       torchAmbient.position.copy(light.position); 
       torch.add(torchAmbient);
 
-      const flameGeometry = new THREE.SphereGeometry(
-        0.1, 
-        performanceMode ? 6 : 12,  
-        performanceMode ? 4 : 18   
-      );
-      const flameMaterial = new THREE.MeshBasicMaterial({
-        color: 0xff2200, 
-        transparent: true,
-        opacity: 0.9,
-        emissive: 0xff0000, 
-        emissiveIntensity: 2.0
-      });
+      // Create flame and glow using the shared geometries and materials
       const flame = new THREE.Mesh(flameGeometry, flameMaterial);
       flame.position.copy(light.position);
       torch.add(flame);
 
-      const glowGeometry = new THREE.SphereGeometry(
-        0.2, 
-        performanceMode ? 8 : 12,
-        performanceMode ? 6 : 8
-      );
-      const glowMaterial = new THREE.MeshBasicMaterial({
-        color: 0xff5500,
-        transparent: true,
-        opacity: 0.4,
-      });
       const glow = new THREE.Mesh(glowGeometry, glowMaterial);
       glow.position.copy(light.position); 
       torch.add(glow);
       
-      // Make torch cast shadows
+      // Make torch cast shadows - only for non-flame/glow meshes and only when not in performance mode
       torch.traverse((node) => {
         if (node.isMesh && node !== flame && node !== glow) {
-          node.castShadow = !performanceMode; 
-          node.receiveShadow = !performanceMode;
+          node.castShadow = useShadows; 
+          node.receiveShadow = useShadows;
         }
       });
       
       torches.push({ torch, light, ambientLight: torchAmbient });
     });
     
-    console.log(`Added ${torches.length} wall torches to the scene`);
     return torches;
     
   } catch (error) {
@@ -223,64 +241,75 @@ export async function addWallTorches(scene, walls, options = {}) {
   }
 }
 
-
-
-
+// Optimized torch light update function
 export function updateTorchLights(torches) {
   if (!torches || torches.length === 0) return;
   
-  // Only update every other frame to save performance
-  if (Math.floor(Date.now() / 30) % 2 !== 0) return;
+  // Get current frame count for update frequency throttling
+  const frameCount = Math.floor(Date.now() / 30);
+  if (frameCount % LIGHTING_PERFORMANCE.updateFrequency !== 0) return;
   
   // Use a single shared time value for all calculations
   const time = Date.now() * 0.001;
   
-  // Pre-calculate shared values used by all torches to reduce calculations
-  const sinFast = Math.sin(time * 15) * 0.15;  // Reduced amplitude
-  const sinSlow = Math.sin(time * 1.5) * 0.25; // Reduced amplitude
+  // Pre-calculate shared values used by all torches
+  const sinFast = Math.sin(time * 10) * 0.15;  // Reduced frequency
+  const sinSlow = Math.sin(time * 1.2) * 0.2;  // Reduced frequency
+  
+  // In performance mode, only update a subset of torches each frame
+  const updateAllTorches = !LIGHTING_PERFORMANCE.enabled;
   
   torches.forEach(({ torch, light, ambientLight }) => {
+    // Skip some torches in performance mode based on frame count
+    if (!updateAllTorches && (light.userData.index % LIGHTING_PERFORMANCE.updateFrequency) !== (frameCount % LIGHTING_PERFORMANCE.updateFrequency)) {
+      return;
+    }
+    
     if (light && light.userData.flickering) {
-      // Use less randomness for better performance
-      const noise = ((Math.random() - 0.5) * 0.15); 
+      // Reduced randomness - in performance mode, can use a simple math operation instead of Math.random
+      const noise = LIGHTING_PERFORMANCE.enabled ? 
+                    ((time * 1234.5678 % 1) - 0.5) * 0.12 : 
+                    ((Math.random() - 0.5) * 0.15);
       
-      // Simplified flicker calculation - fewer operations
+      // Simplified flicker calculation
       const flicker = sinFast + sinSlow + noise;
       const originalIntensity = light.userData.originalIntensity;
       
-      // Apply intensity with simpler math
+      // Apply intensity
       light.intensity = originalIntensity * (0.85 + flicker);
       
       // Update ambient light intensity with same flicker
       if (ambientLight) {
-        ambientLight.intensity = 2.0 * (0.85 + flicker);
+        ambientLight.intensity = 1.5 * (0.85 + flicker);
       }
       
-      // Update visual mesh sizes
-      // Only update when significant change (save performance)
-      if (Math.abs(light.userData.lastFlicker - flicker) > 0.15) {
+      // Only update visuals if the flicker changed significantly
+      if (Math.abs(light.userData.lastFlicker - flicker) > 0.2) { // Increased threshold
         light.userData.lastFlicker = flicker;
         
         let flameFound = false;
         let glowFound = false;
         
-        // Update only the first two matching meshes to save on loop iterations
+        // Fast loop with early exit and reduced iterations
         for (let i = 0; i < torch.children.length && (!flameFound || !glowFound); i++) {
           const child = torch.children[i];
-          if (child.isMesh) {
-            if (child.material.opacity > 0.8 && !flameFound) {
-              // This is the flame
-              const scale = 0.2 * (1.0 + flicker * 1.2);
-              child.scale.set(scale, scale * 1.5, scale);
-              flameFound = true;
-            } 
-            else if (child.material.opacity < 0.5 && !glowFound) {
-              // This is the glow
-              const scale = 0.4 * (1.0 + flicker * 0.8);
-              child.scale.set(scale, scale, scale);
-              glowFound = true;
-            }
+          if (!child.isMesh) continue;
+          
+          if (child.material.opacity > 0.8 && !flameFound) {
+            // This is the flame - simplified scale calculation
+            const scale = 0.2 * (1.0 + flicker);
+            child.scale.set(scale, scale * 1.5, scale);
+            flameFound = true;
+          } 
+          else if (child.material.opacity < 0.5 && !glowFound) {
+            // This is the glow - simplified scale calculation
+            const scale = 0.4 * (1.0 + flicker * 0.6);
+            child.scale.set(scale, scale, scale);
+            glowFound = true;
           }
+          
+          // Early exit when both are found
+          if (flameFound && glowFound) break;
         }
       }
     }
