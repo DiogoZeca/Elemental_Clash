@@ -342,3 +342,42 @@ export function setupShadows(walls, floor, ceiling, table) {
   console.log('Shadow setup complete');
 }
 
+// Add this function after the createTextTexture function
+export function updateFloatingTextToVictory() {
+  if (!sceneObjects) {
+    console.warn('sceneObjects is undefined');
+    return;
+  }
+  
+  if (!sceneObjects.floatingText) {
+    console.warn('sceneObjects.floatingText is undefined');
+    return;
+  }
+  
+  try {
+    if (sceneObjects.floatingText.material.map) {
+      sceneObjects.floatingText.material.map.dispose();
+    }
+    
+    // Create new victory texture
+    const victoryTexture = createTextTexture('Congratulations! You are an Elemental Master!', {
+      width: 700,
+      height: 128,
+      font: 'bold 42px "Trebuchet MS", Arial, sans-serif'
+    });
+
+    victoryTexture.needsUpdate = true;
+    
+    // Update the material with new texture
+    sceneObjects.floatingText.material.map = victoryTexture;
+    sceneObjects.floatingText.material.needsUpdate = true;
+    
+    // Add a golden glow effect
+    sceneObjects.floatingText.material.emissive = new THREE.Color(0xffd700);
+    sceneObjects.floatingText.material.emissiveIntensity = 0.3;
+    
+    console.log('Floating text updated to victory message');
+  } catch (error) {
+    console.error('Failed to update floating text:', error);
+  }
+}

@@ -8,7 +8,7 @@ import "./miniGame.js";
 
 // Import core modules
 import { setupBaseLighting } from "./lighting.js";
-import { setupScene, setupShadows, updateFloatingText } from "./scene.js";
+import { setupScene, setupShadows, updateFloatingText, updateFloatingTextToVictory } from "./scene.js";
 import {
   initControls,
   updateCameraRotation,
@@ -166,7 +166,7 @@ function animate() {
       }
 
       // Add the floating text billboard update
-      if (sceneObjects.floatingText) {
+      if (sceneObjects.floatingText && sceneObjects.floatingText.material) {
         updateFloatingText(sceneObjects.floatingText, camera);
       }
           
@@ -176,9 +176,12 @@ function animate() {
       }
     }
 
+    try {
+      renderer.render(scene, camera);
+    } catch (renderError) {
+      console.error("Render error:", renderError);
+    }
 
-
-    renderer.render(scene, camera);
     stats.update();
   } catch (error) {
     console.error("Error in animation loop:", error);

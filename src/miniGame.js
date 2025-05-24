@@ -1,5 +1,6 @@
 import { registerMiniGame, exitGame } from './gameManager.js';
 import { animateCharacter } from './characters.js';
+import { updateFloatingTextToVictory } from './scene.js';
 
 // Register this module's initialization function
 registerMiniGame(initGame);
@@ -272,17 +273,272 @@ function showFinalResult() {
     if (document.pointerLockElement) {
         document.exitPointerLock();
     }
-    
-    // Calculate result information once
+
+    // Determine if player won
     const isPlayerWinner = gameState.playerScore > gameState.aiScore;
-    const resultText = isPlayerWinner ? 'You Win!' : 'Enemy Wins!';
-    const resultColor = isPlayerWinner ? '#00ccff' : '#ff6600';
+
+    // Calculate result information once
+    if (isPlayerWinner) {
+        // Store victory in localStorage
+        localStorage.setItem('elementalClashWon', 'true');
+        
+        // Update floating text
+        updateFloatingTextToVictory();
+        
+        console.log('Player won! Updating rewards...');
+
+        startVictorySequence();
+        return;
+    }
     
-    // Create the overlay with all content in a single operation
+    // If we reach here, player lost - show defeat overlay
+    showDefeatOverlay();
+}
+
+/**
+ * Start the victory sequence with camera movement and fireworks
+ */
+function startVictorySequence() {
+    console.log('Starting victory sequence...');
+    
+    // Remove game UI immediately
+    const gameUI = document.getElementById('game-ui');
+    if (gameUI && gameUI.parentNode) {
+        gameUI.style.opacity = '0';
+        setTimeout(() => {
+            if (gameUI.parentNode) {
+                document.body.removeChild(gameUI);
+            }
+        }, 500);
+    }
+    
+    // Get camera reference - with fallback for rendering issues
+    const camera = window.gameCamera;
+    if (!camera) {
+        console.error('Camera not found, using simple victory display');
+        createSimpleVictoryDisplay();
+        return;
+    }
+    
+    try {
+        // Calculate outdoor position (outside the room, looking up at sky)
+        const outdoorPosition = new THREE.Vector3(0, 2, 30); // Outside the building
+        const lookUpDirection = new THREE.Vector3(0, 1, -0.3).normalize(); // Looking up at sky
+        
+        // Store original camera state
+        const originalPosition = camera.position.clone();
+        const originalQuaternion = camera.quaternion.clone();
+        
+        // Calculate target rotation (looking up at sky)
+        const targetQuaternion = new THREE.Quaternion();
+        const targetMatrix = new THREE.Matrix4().lookAt(
+            outdoorPosition,
+            new THREE.Vector3().addVectors(outdoorPosition, lookUpDirection),
+            new THREE.Vector3(0, 1, 0)
+        );
+        targetQuaternion.setFromRotationMatrix(targetMatrix);
+        
+        // Start camera transition
+        let transitionProgress = 0;
+        const transitionDuration = 2000; // 2 seconds
+        const startTime = Date.now();
+        
+        const animateTransition = () => {
+            try {
+                const elapsed = Date.now() - startTime;
+                transitionProgress = Math.min(elapsed / transitionDuration, 1);
+                
+                // Smooth easing function
+                const easedProgress = transitionProgress < 0.5
+                    ? 2 * transitionProgress * transitionProgress
+                    : 1 - Math.pow(-2 * transitionProgress + 2, 2) / 2;
+                
+                // Interpolate camera position and rotation
+                camera.position.lerpVectors(originalPosition, outdoorPosition, easedProgress);
+                camera.quaternion.slerpQuaternions(originalQuaternion, targetQuaternion, easedProgress);
+                
+                if (transitionProgress < 1) {
+                    requestAnimationFrame(animateTransition);
+                } else {
+                    // Transition complete, show simple victory UI
+                    showSimpleVictoryUI(camera, originalPosition, originalQuaternion);
+                }
+            } catch (error) {
+                console.error('Error during camera transition, falling back to simple victory:', error);
+                createSimpleVictoryDisplay();
+            }
+        };
+        
+        animateTransition();
+    } catch (error) {
+        console.error('Error setting up victory sequence, using simple display:', error);
+        createSimpleVictoryDisplay();
+    }
+}
+
+/**
+ * Show simple victory UI after camera transition (no 3D objects)
+ */
+function showSimpleVictoryUI(camera, originalPosition, originalQuaternion) {
+    console.log('Showing simple victory UI...');
+    
+    // Create victory overlay with countdown
+    createVictoryOverlayWithCountdown();
+    
+    // No cleanup function needed - the game will restart automatically
+}
+
+/**
+ * Create a simple victory display without any Three.js interactions
+ */
+function createSimpleVictoryDisplay() {
+    console.log('Creating simple victory display...');
+    
+    // Create victory UI overlay with countdown
+    createVictoryOverlayWithCountdown();
+    
+    // No cleanup function needed - the game will restart automatically
+}
+
+/**
+ * Create victory UI overlay with automatic game restart countdown
+ */
+function createVictoryOverlayWithCountdown() {
+    const victoryOverlay = document.createElement('div');
+    victoryOverlay.id = 'victory-overlay';
+    
+    Object.assign(victoryOverlay.style, {
+        position: 'fixed',
+        top: '0',
+        left: '0',
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: '400',
+        pointerEvents: 'none',
+        background: 'linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,165,0,0.1) 50%, rgba(255,69,0,0.1) 100%)'
+    });
+    
+    victoryOverlay.innerHTML = `
+        <div style="
+            font-size: 120px; 
+            font-weight: bold; 
+            color: #FFD700; 
+            text-shadow: 
+                0 0 30px #FFD700,
+                0 0 60px #FFA500,
+                0 0 90px #FF6600,
+                3px 3px 0px #B8860B;
+            margin-bottom: 30px;
+            animation: victoryPulse 3s infinite ease-in-out;
+            text-align: center;
+            line-height: 1.1;
+        ">
+            🏆<br>
+            VICTORY!
+        </div>
+        <div style="
+            font-size: 48px; 
+            font-weight: bold;
+            color: #FFD700; 
+            text-shadow: 
+                0 0 20px #FFD700,
+                2px 2px 0px #B8860B;
+            margin-bottom: 20px;
+            animation: titleShine 2s infinite ease-in-out;
+            text-align: center;
+        ">
+            You are the Elemental Clash King!
+        </div>
+        <div style="
+            font-size: 28px; 
+            color: #ffffff; 
+            text-shadow: 0 0 15px #000000;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 20px 40px;
+            border-radius: 15px;
+            margin-top: 40px;
+            border: 2px solid #FFD700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        ">
+            🎉 Congratulations! 🎉<br>
+            <span style="font-size: 20px; margin-top: 15px; display: block;">
+                Game will restart in <span id="victory-countdown" style="color: #FFD700; font-weight: bold;">5</span> seconds...
+            </span>
+        </div>
+    `;
+    
+    // Add enhanced CSS animations
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes victoryPulse {
+            0%, 100% { 
+                transform: scale(1) rotateY(0deg); 
+                text-shadow: 0 0 30px #FFD700, 0 0 60px #FFA500, 0 0 90px #FF6600, 3px 3px 0px #B8860B;
+            }
+            50% { 
+                transform: scale(1.05) rotateY(5deg); 
+                text-shadow: 0 0 40px #FFD700, 0 0 80px #FFA500, 0 0 120px #FF6600, 3px 3px 0px #B8860B;
+            }
+        }
+        
+        @keyframes titleShine {
+            0%, 100% { 
+                color: #FFD700;
+                text-shadow: 0 0 20px #FFD700, 2px 2px 0px #B8860B;
+            }
+            50% { 
+                color: #FFF8DC;
+                text-shadow: 0 0 30px #FFD700, 0 0 40px #FFA500, 2px 2px 0px #B8860B;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    document.body.appendChild(victoryOverlay);
+    
+    // Start countdown for game restart
+    let countdown = 5;
+    const countdownElement = document.getElementById('victory-countdown');
+    
+    const countdownTimer = setInterval(() => {
+        countdown--;
+        if (countdownElement) {
+            countdownElement.textContent = countdown.toString();
+        }
+        
+        if (countdown <= 0) {
+            clearInterval(countdownTimer);
+            // Restart the entire game (like F5)
+            window.location.reload();
+        }
+    }, 1000);
+    
+    // Store timer for cleanup if needed
+    timers.countdown = countdownTimer;
+}
+
+/**
+ * Create victory UI overlay
+ */
+function createVictoryOverlay() {
+    // This function is now replaced by createVictoryOverlayWithCountdown
+    // Keeping it for compatibility but redirecting to the new function
+    createVictoryOverlayWithCountdown();
+}
+
+/**
+ * Show regular defeat overlay for when player loses
+ */
+function showDefeatOverlay() {
+    if (document.getElementById('final-overlay')) return;
+
     const finalOverlay = document.createElement('div');
     finalOverlay.id = 'final-overlay';
     
-    // Set all styles in one batch
     Object.assign(finalOverlay.style, {
         position: 'absolute',
         top: '0',
@@ -297,10 +553,9 @@ function showFinalResult() {
         zIndex: '300'
     });
     
-    // Create content once and append in a batch
     finalOverlay.innerHTML = `
-        <div style="font-size: 64px; font-weight: bold; color: ${resultColor}; text-shadow: 0 0 20px ${resultColor}88; margin-bottom: 30px;">
-            ${resultText}
+        <div style="font-size: 64px; font-weight: bold; color: #ff6600; text-shadow: 0 0 20px #ff6600; margin-bottom: 30px;">
+            Enemy Wins!
         </div>
         <div style="font-size: 36px; margin-bottom: 20px; color: #ddd;">
             Best of 5
@@ -323,17 +578,15 @@ function showFinalResult() {
         </div>
     `;
     
-    // Add to document once
     document.body.appendChild(finalOverlay);
     
-    // Stop propagation for the entire overlay with one event handler
-    finalOverlay.addEventListener('click', event => {
-        event.stopPropagation();
-    });
-    
-    // Set up countdown
+    // Setup countdown and button handlers
     let countdown = 3;
     const countdownElement = document.getElementById('countdown');
+
+    if (timers.countdown) {
+        clearInterval(timers.countdown);
+    }
     
     timers.countdown = setInterval(() => {
         countdown--;
@@ -350,16 +603,27 @@ function showFinalResult() {
     // Add button handlers
     document.getElementById('play-again-btn')?.addEventListener('click', event => {
         event.stopPropagation();
-        clearInterval(timers.countdown);
+        if (timers.countdown) {
+            clearInterval(timers.countdown);
+            timers.countdown = null;
+        }
         if (finalOverlay.parentNode) {
             document.body.removeChild(finalOverlay);
         }
         resetGame();
+        createOptimizedUI();
     });
     
     document.getElementById('exit-final-btn')?.addEventListener('click', event => {
         event.stopPropagation();
-        clearInterval(timers.countdown);
+        
+        // Clear countdown
+        if (timers.countdown) {
+            clearInterval(timers.countdown);
+            timers.countdown = null;
+        }
+        
+        // Exit immediately
         cleanupAndExitWithTransition();
     });
 }
@@ -541,6 +805,11 @@ function cleanupAndExitWithTransition() {
     const finalOverlay = document.getElementById('final-overlay');
     if (finalOverlay && finalOverlay.parentNode) {
         document.body.removeChild(finalOverlay);
+    }
+
+    const victoryOverlay = document.getElementById('victory-overlay');
+    if (victoryOverlay && victoryOverlay.parentNode) {
+        document.body.removeChild(victoryOverlay);
     }
     
     // Fade out the game UI with minimal DOM operations
