@@ -91,21 +91,6 @@ function resetRound() {
     gameState.isAnimating = false;
 }
 
-/**
- * Properly clean up and exit the game
- */
-function cleanupAndExit() {
-    cleanupTimers();
-    if (keyboardListener) {
-        window.removeEventListener('keydown', keyboardListener);
-        keyboardListener = null;
-    }
-    const finalOverlay = document.getElementById('final-overlay');
-    if (finalOverlay && finalOverlay.parentNode) {
-        document.body.removeChild(finalOverlay);
-    }
-    exitGame(false); 
-}
 
 /**
  * Clean up all timers to prevent memory leaks
@@ -311,81 +296,21 @@ function startVictorySequence() {
             }
         }, 500);
     }
-    
-    // Get camera reference - with fallback for rendering issues
-    const camera = window.gameCamera;
-    if (!camera) {
-        console.error('Camera not found, using simple victory display');
-        createSimpleVictoryDisplay();
-        return;
-    }
-    
-    try {
-        // Calculate outdoor position (outside the room, looking up at sky)
-        const outdoorPosition = new THREE.Vector3(0, 2, 30); // Outside the building
-        const lookUpDirection = new THREE.Vector3(0, 1, -0.3).normalize(); // Looking up at sky
-        
-        // Store original camera state
-        const originalPosition = camera.position.clone();
-        const originalQuaternion = camera.quaternion.clone();
-        
-        // Calculate target rotation (looking up at sky)
-        const targetQuaternion = new THREE.Quaternion();
-        const targetMatrix = new THREE.Matrix4().lookAt(
-            outdoorPosition,
-            new THREE.Vector3().addVectors(outdoorPosition, lookUpDirection),
-            new THREE.Vector3(0, 1, 0)
-        );
-        targetQuaternion.setFromRotationMatrix(targetMatrix);
-        
-        // Start camera transition
-        let transitionProgress = 0;
-        const transitionDuration = 2000; // 2 seconds
-        const startTime = Date.now();
-        
-        const animateTransition = () => {
-            try {
-                const elapsed = Date.now() - startTime;
-                transitionProgress = Math.min(elapsed / transitionDuration, 1);
-                
-                // Smooth easing function
-                const easedProgress = transitionProgress < 0.5
-                    ? 2 * transitionProgress * transitionProgress
-                    : 1 - Math.pow(-2 * transitionProgress + 2, 2) / 2;
-                
-                // Interpolate camera position and rotation
-                camera.position.lerpVectors(originalPosition, outdoorPosition, easedProgress);
-                camera.quaternion.slerpQuaternions(originalQuaternion, targetQuaternion, easedProgress);
-                
-                if (transitionProgress < 1) {
-                    requestAnimationFrame(animateTransition);
-                } else {
-                    // Transition complete, show simple victory UI
-                    showSimpleVictoryUI(camera, originalPosition, originalQuaternion);
-                }
-            } catch (error) {
-                console.error('Error during camera transition, falling back to simple victory:', error);
-                createSimpleVictoryDisplay();
-            }
-        };
-        
-        animateTransition();
-    } catch (error) {
-        console.error('Error setting up victory sequence, using simple display:', error);
-        createSimpleVictoryDisplay();
-    }
-}
 
-/**
- * Show simple victory UI after camera transition (no 3D objects)
- */
-function showSimpleVictoryUI(camera, originalPosition, originalQuaternion) {
-    console.log('Showing simple victory UI...');
+    // Import and start victory transition
+    import('./game.js').then(({ startVictoryTransition }) => {
+        if (startVictoryTransition()) {
+            console.log('Victory camera transition initiated');
+            createVictoryOverlayWithCountdown();
+        } else {
+            createSimpleVictoryDisplay();
+        }
+    }).catch((error) => {
+        console.error('Failed to import game transition:', error);
+        createSimpleVictoryDisplay();
+    });
     
-    // Create victory overlay with countdown
-    createVictoryOverlayWithCountdown();
-    
-    // No cleanup function needed - the game will restart automatically
+
 }
 
 /**
@@ -393,11 +318,7 @@ function showSimpleVictoryUI(camera, originalPosition, originalQuaternion) {
  */
 function createSimpleVictoryDisplay() {
     console.log('Creating simple victory display...');
-    
-    // Create victory UI overlay with countdown
     createVictoryOverlayWithCountdown();
-    
-    // No cleanup function needed - the game will restart automatically
 }
 
 /**
@@ -519,15 +440,6 @@ function createVictoryOverlayWithCountdown() {
     
     // Store timer for cleanup if needed
     timers.countdown = countdownTimer;
-}
-
-/**
- * Create victory UI overlay
- */
-function createVictoryOverlay() {
-    // This function is now replaced by createVictoryOverlayWithCountdown
-    // Keeping it for compatibility but redirecting to the new function
-    createVictoryOverlayWithCountdown();
 }
 
 /**

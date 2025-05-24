@@ -188,15 +188,29 @@ export function updateCameraTransition(camera) {
   // Transition complete
   if (progress >= 1.0) {
     isInTransition = false;
+
+    // Check if this is a victory transition
+    if (transition.isVictoryTransition) {
+      console.log("Victory transition complete - camera now looking at sky!");
+      
+      // TEMPORARILY DISABLE FIREWORKS TO FIX THE ERROR
+      // Instead, just add a simple console message
+      console.log("🎆 Victory fireworks would appear here! 🎆");
+      
+      // You can add a simple DOM-based celebration effect instead
+      createSimpleVictoryCelebration();
+      
+      return false;
+    }
+
+
     
-    // If we're exiting (can detect by checking if target is original position)
     if (transition.targetPosition === originalCameraPosition || 
         (transition.targetPosition && originalCameraPosition && 
         transition.targetPosition.distanceTo(originalCameraPosition) < 0.1)) {
       console.log("Exit transition complete");
       playerState.inGame = false;
       
-      // Re-enable interaction after transition completes
       setTimeout(() => {
         if (document.getElementById("instructions")) {
           document.getElementById("instructions").style.display = "block";
@@ -233,4 +247,321 @@ function startMiniGame() {
   // Initialize the mini-game via the manager
   console.log("Calling mini-game initialization through manager");
   managerStartMiniGame();
+}
+
+
+/**
+ * Start victory camera transition to outside and look at sky
+ */
+export function startVictoryTransition() {
+    const camera = window.gameCamera;
+    if (!camera) {
+        console.error('Camera not found for victory transition');
+        return false;
+    }
+    
+    console.log('Starting victory camera transition...');
+    
+    // Calculate outdoor position (outside the room, looking up at sky)
+    const outdoorPosition = new THREE.Vector3(0, 5, 35);
+    const skyLookTarget = new THREE.Vector3(0, 20, 25);
+    
+    // Store original camera state
+    const originalPosition = camera.position.clone();
+    const originalQuaternion = camera.quaternion.clone();
+    
+    // Calculate target rotation to look up at the sky
+    const targetQuaternion = new THREE.Quaternion();
+    const targetMatrix = new THREE.Matrix4().lookAt(
+        outdoorPosition,
+        skyLookTarget,
+        new THREE.Vector3(0, 1, 0)
+    );
+    targetQuaternion.setFromRotationMatrix(targetMatrix);
+    
+    // Setup transition data
+    camera.userData = camera.userData || {};
+    camera.userData.transition = {
+        startPosition: originalPosition,
+        startRotation: originalQuaternion,
+        targetPosition: outdoorPosition,
+        targetRotation: targetQuaternion,
+        isVictoryTransition: true
+    };
+    
+    // Start transition
+    isInTransition = true;
+    transitionStartTime = Date.now();
+    
+    console.log('Victory transition started from:', originalPosition, 'to:', outdoorPosition);
+    
+    return true;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Create a simple DOM-based victory celebration instead of 3D fireworks
+ */
+function createSimpleVictoryCelebration() {
+  console.log("Creating simple victory celebration effects");
+  
+  // Create celebration particles in the DOM (not Three.js)
+  const celebration = document.createElement('div');
+  celebration.id = 'victory-celebration';
+  celebration.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 200;
+    overflow: hidden;
+    background: radial-gradient(circle at center, rgba(255,215,0,0.1) 0%, rgba(255,165,0,0.05) 50%, transparent 100%);
+  `;
+  
+  // Create animated celebration elements
+  const colors = ['#00ccff', '#ff6600', '#aaddff', '#ffcc00', '#ffffff'];
+  const symbols = ['✨', '🎆', '⭐', '💥', '🌟', '🎉', '⚡', '💫', '🔥', '❄️'];
+  
+  // Create multiple waves of particles
+  for (let wave = 0; wave < 3; wave++) {
+    setTimeout(() => {
+      createParticleWave(celebration, colors, symbols, wave);
+    }, wave * 800);
+  }
+  
+  // Add enhanced CSS animations
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes celebrate {
+      0% {
+        transform: scale(0) rotate(0deg) translateY(50px);
+        opacity: 0;
+        filter: blur(5px);
+      }
+      25% {
+        opacity: 1;
+        filter: blur(0px);
+      }
+      50% {
+        transform: scale(1.8) rotate(180deg) translateY(-20px);
+        opacity: 1;
+      }
+      75% {
+        transform: scale(1.2) rotate(270deg) translateY(-40px);
+        opacity: 0.8;
+      }
+      100% {
+        transform: scale(0.3) rotate(360deg) translateY(-100px);
+        opacity: 0;
+        filter: blur(3px);
+      }
+    }
+    
+    @keyframes fireworks {
+      0% {
+        transform: scale(0) rotate(0deg);
+        opacity: 0;
+        filter: brightness(2) blur(2px);
+      }
+      15% {
+        transform: scale(0.5) rotate(45deg);
+        opacity: 1;
+        filter: brightness(3) blur(0px);
+      }
+      30% {
+        transform: scale(1.5) rotate(90deg);
+        opacity: 1;
+        filter: brightness(2.5) blur(0px);
+      }
+      60% {
+        transform: scale(2.2) rotate(270deg);
+        opacity: 0.7;
+        filter: brightness(1.5) blur(1px);
+      }
+      100% {
+        transform: scale(0.8) rotate(360deg);
+        opacity: 0;
+        filter: brightness(1) blur(4px);
+      }
+    }
+    
+    @keyframes sparkle {
+      0%, 100% {
+        transform: scale(0) rotate(0deg);
+        opacity: 0;
+      }
+      20% {
+        transform: scale(1.2) rotate(72deg);
+        opacity: 1;
+        filter: brightness(3);
+      }
+      40% {
+        transform: scale(0.8) rotate(144deg);
+        opacity: 0.8;
+      }
+      60% {
+        transform: scale(1.5) rotate(216deg);
+        opacity: 1;
+        filter: brightness(2.5);
+      }
+      80% {
+        transform: scale(1) rotate(288deg);
+        opacity: 0.6;
+      }
+    }
+    
+    @keyframes pulse-glow {
+      0%, 100% {
+        box-shadow: 0 0 20px currentColor, 0 0 40px currentColor;
+        transform: scale(1);
+      }
+      50% {
+        box-shadow: 0 0 40px currentColor, 0 0 80px currentColor, 0 0 120px currentColor;
+        transform: scale(1.1);
+      }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  document.body.appendChild(celebration);
+  
+  // Add screen flash effect
+  createScreenFlash();
+  
+  // Add floating victory text
+  createFloatingVictoryText(celebration);
+  
+  // Remove celebration after animation
+  setTimeout(() => {
+    if (celebration.parentNode) {
+      document.body.removeChild(celebration);
+    }
+    if (style.parentNode) {
+      document.head.removeChild(style);
+    }
+  }, 8000);
+}
+
+function createParticleWave(container, colors, symbols, waveIndex) {
+  const particleCount = 15;
+  const animations = ['celebrate', 'fireworks', 'sparkle'];
+  
+  for (let i = 0; i < particleCount; i++) {
+    const particle = document.createElement('div');
+    const symbol = symbols[Math.floor(Math.random() * symbols.length)];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const animation = animations[Math.floor(Math.random() * animations.length)];
+    
+    particle.textContent = symbol;
+    particle.style.cssText = `
+      position: absolute;
+      font-size: ${Math.random() * 40 + 25}px;
+      color: ${color};
+      left: ${Math.random() * 100}%;
+      top: ${Math.random() * 100}%;
+      animation: ${animation} ${Math.random() * 2 + 2.5}s ease-out forwards;
+      text-shadow: 
+        0 0 10px ${color},
+        0 0 20px ${color},
+        0 0 30px ${color};
+      z-index: ${201 + waveIndex};
+    `;
+    
+    container.appendChild(particle);
+    
+    // Remove particle after animation
+    setTimeout(() => {
+      if (particle.parentNode) {
+        particle.parentNode.removeChild(particle);
+      }
+    }, 4000);
+  }
+}
+
+function createScreenFlash() {
+  const flash = document.createElement('div');
+  flash.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,215,0,0.2) 30%, transparent 70%);
+    pointer-events: none;
+    z-index: 199;
+    animation: flash 0.8s ease-out;
+  `;
+  
+  const flashStyle = document.createElement('style');
+  flashStyle.textContent = `
+    @keyframes flash {
+      0% { opacity: 0; }
+      20% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+  `;
+  document.head.appendChild(flashStyle);
+  document.body.appendChild(flash);
+  
+  setTimeout(() => {
+    if (flash.parentNode) document.body.removeChild(flash);
+    if (flashStyle.parentNode) document.head.removeChild(flashStyle);
+  }, 800);
+}
+
+function createFloatingVictoryText(container) {
+  const victoryText = document.createElement('div');
+  victoryText.textContent = '🏆 ELEMENTAL CHAMPION! 🏆';
+  victoryText.style.cssText = `
+    position: absolute;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 48px;
+    font-weight: bold;
+    color: #FFD700;
+    text-shadow: 
+      0 0 20px #FFD700,
+      0 0 40px #FFA500,
+      0 0 60px #FF6600,
+      3px 3px 0px #B8860B;
+    animation: pulse-glow 1.5s infinite ease-in-out;
+    z-index: 210;
+    text-align: center;
+    white-space: nowrap;
+  `;
+  
+  container.appendChild(victoryText);
+  
+  // Add floating elements around the text
+  const elements = ['🔥', '💧', '❄️', '⚡', '🌟'];
+  elements.forEach((element, index) => {
+    const floater = document.createElement('div');
+    floater.textContent = element;
+    floater.style.cssText = `
+      position: absolute;
+      top: ${15 + Math.random() * 10}%;
+      left: ${20 + index * 15}%;
+      font-size: 32px;
+      animation: sparkle ${2 + Math.random()}s infinite ease-in-out;
+      animation-delay: ${index * 0.3}s;
+      text-shadow: 0 0 15px currentColor;
+    `;
+    container.appendChild(floater);
+  });
 }

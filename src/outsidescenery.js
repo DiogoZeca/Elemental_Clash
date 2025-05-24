@@ -353,8 +353,10 @@ export async function createOutsideScenery(scene, options = {}) {
     // Create rocks
     const rocks = await createRocks(scene, {
       count: 40,
-      spread: 95,
-      minDistance: 15
+      spread: 90,
+      minDistance: 15,
+      mapWidth: config.groundSize * 0.95,  
+      mapDepth: config.groundSize * 0.95
     }).catch(err => {
       console.error('Failed to create rocks:', err);
       return [];
@@ -465,7 +467,7 @@ export async function createRocks(scene, options = {}) {
   const config = {
     count: options.count || 30,
     minSize: options.minSize || 0.3,
-    maxSize: options.maxSize || 2.0,
+    maxSize: options.maxSize || 1.3,
     spread: options.spread || 70,
     minDistance: options.minDistance || 15, 
     buildingPadding: options.buildingPadding || 10, 
@@ -473,7 +475,11 @@ export async function createRocks(scene, options = {}) {
     roomWidth: SCENE_CONFIG.roomWidth,
     roomDepth: SCENE_CONFIG.roomDepth,
     wallOffset: SCENE_CONFIG.wallOffset,
-    playerSafeRadius: options.playerSafeRadius || 6.0
+    playerSafeRadius: options.playerSafeRadius || 6.0,
+
+    mapWidth: options.mapWidth || 95,  
+    mapDepth: options.mapDepth || 95,  
+    groundLevel: -3 
   };
 
   // Define building boundaries to avoid
@@ -525,7 +531,8 @@ export async function createRocks(scene, options = {}) {
   };
 
   const isInvalidPosition = (x, z) => {
-    return isInsideBuilding(x, z) || isOnPath(x, z) || isTooCloseToSpawn(x, z);
+    const outsideBounds = Math.abs(x) > config.mapWidth/2 || Math.abs(z) > config.mapDepth/2;
+    return outsideBounds || isInsideBuilding(x, z) || isOnPath(x, z) || isTooCloseToSpawn(x, z);
   };
 
   // Helper to generate valid position
@@ -535,7 +542,8 @@ export async function createRocks(scene, options = {}) {
     
     do {
       const angle = Math.random() * Math.PI * 2;
-      distance = config.minDistance + Math.random() * (config.spread - config.minDistance);
+      const maxDistance = Math.min(config.spread, config.mapWidth/2 * 0.95);
+      distance = config.minDistance + Math.random() * (maxDistance - config.minDistance);
       posX = Math.cos(angle) * distance;
       posZ = Math.sin(angle) * distance;
       
@@ -580,7 +588,7 @@ export async function createRocks(scene, options = {}) {
     const stoneModel = stoneModels[stoneIndex].clone();
     
     // Position and scale
-    stoneModel.position.set(position.posX, -3 + size*0.25, position.posZ);
+    stoneModel.position.set(position.posX, config.groundLevel + size*0.25, position.posZ);
     stoneModel.scale.set(size, size * (0.6 + Math.random() * 0.4), size);
     
     // Rotate randomly
@@ -622,14 +630,18 @@ function createFallbackRocks(scene, options = {}) {
   const config = {
     count: options.count || 30,
     minSize: options.minSize || 0.5,
-    maxSize: options.maxSize || 3.5,
+    maxSize: options.maxSize || 1.5,
     spread: options.spread || 70,
     minDistance: options.minDistance || 10, 
     buildingPadding: options.buildingPadding || 10, 
     pathWidth: options.pathWidth || 6.0, 
     roomWidth: SCENE_CONFIG.roomWidth,
     roomDepth: SCENE_CONFIG.roomDepth,
-    wallOffset: SCENE_CONFIG.wallOffset
+    wallOffset: SCENE_CONFIG.wallOffset,
+
+    mapWidth: options.mapWidth || 95,
+    mapDepth: options.mapDepth || 95,
+    groundLevel: -3
   };
 
   // Define building boundaries to avoid (same as in createRocks)
@@ -674,7 +686,8 @@ function createFallbackRocks(scene, options = {}) {
   
   // Function to check if position is invalid (same as in createRocks)
   const isInvalidPosition = (x, z) => {
-    return isInsideBuilding(x, z) || isOnPath(x, z);
+    const outsideBounds = Math.abs(x) > config.mapWidth/2 || Math.abs(z) > config.mapDepth/2;
+    return outsideBounds || isInsideBuilding(x, z) || isOnPath(x, z);
   };
 
   // Helper to generate valid position (same as in createRocks)
@@ -684,7 +697,8 @@ function createFallbackRocks(scene, options = {}) {
     
     do {
       const angle = Math.random() * Math.PI * 2;
-      distance = config.minDistance + Math.random() * (config.spread - config.minDistance);
+      const maxDistance = Math.min(config.spread, config.mapWidth/2 * 0.95);
+      distance = config.minDistance + Math.random() * (maxDistance - config.minDistance);
       posX = Math.cos(angle) * distance;
       posZ = Math.sin(angle) * distance;
       
@@ -756,7 +770,7 @@ function createFallbackRocks(scene, options = {}) {
     const rock = new THREE.Mesh(geometry, material);
     
     // Position and scale
-    rock.position.set(position.posX, -3 + size/2, position.posZ);
+    rock.position.set(position.posX, config.groundLevel + size/2, position.posZ);
     rock.scale.set(
       size * (0.8 + Math.random() * 0.4), 
       size * (0.7 + Math.random() * 0.6), 
