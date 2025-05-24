@@ -8,7 +8,7 @@ import "./miniGame.js";
 
 // Import core modules
 import { setupBaseLighting } from "./lighting.js";
-import { setupScene, setupShadows } from "./scene.js";
+import { setupScene, setupShadows, updateFloatingText } from "./scene.js";
 import {
   initControls,
   updateCameraRotation,
@@ -164,12 +164,19 @@ function animate() {
       if (sceneObjects.outsideElements?.moon?.moon) {
         updateMoonBillboard(sceneObjects.outsideElements.moon.moon, camera);
       }
-      
+
+      // Add the floating text billboard update
+      if (sceneObjects.floatingText) {
+        updateFloatingText(sceneObjects.floatingText, camera);
+      }
+          
       // Add torch flickering animation
       if (sceneObjects.torches) {
         updateTorchLights(sceneObjects.torches);
       }
     }
+
+
 
     renderer.render(scene, camera);
     stats.update();

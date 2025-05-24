@@ -7,6 +7,72 @@ import { setTableReference } from './physics.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { setupBaseLighting, addWallTorches } from './lighting.js';
 
+
+// Helper function to create a text texture
+function createTextTexture(text, options = {}) {
+  const canvas = document.createElement('canvas');
+  canvas.width = options.width || 700;
+  canvas.height = options.height || 128;
+  
+  const context = canvas.getContext('2d');
+
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  
+  
+  // Text settings
+  context.font = options.font || 'bold 40px Trebuchet MS, Arial, sans-serif';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+
+  const colors = [
+    { color: 'rgba(0, 204, 255, 0.3)', blur: 20 },
+    { color: 'rgba(138, 43, 226, 0.3)', blur: 15 },
+    { color: 'rgba(255, 102, 0, 0.3)', blur: 10 }
+  ];
+  
+  colors.forEach(({color, blur}) => {
+    context.shadowColor = color;
+    context.shadowBlur = blur;
+    context.shadowOffsetX = 0;
+    context.shadowOffsetY = 0;
+    context.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    context.fillText(text, canvas.width/2, canvas.height/2);
+  });
+  
+  context.shadowBlur = 0;
+  context.shadowColor = 'transparent';
+  context.fillStyle = 'rgba(255, 255, 255, 1.0)';
+  context.fillText(text, canvas.width/2, canvas.height/2);
+  
+  // Create texture
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  return texture;
+}
+
+
+// Helper function to update the floating text billboard
+export function updateFloatingText(textMesh, camera) {
+  if (!textMesh) return;
+  
+  // Billboard effect - always face camera
+  textMesh.quaternion.copy(camera.quaternion);
+  
+  // Gentle floating animation
+  const time = Date.now() * 0.001; // Current time in seconds
+  if (textMesh.userData && textMesh.userData.baseY !== undefined) {
+    textMesh.position.y = textMesh.userData.baseY + 
+      Math.sin(time) * textMesh.userData.floatHeight;
+  }
+}
+
+
+
+
+
+
+
+
 export async function setupScene(scene) {
   try {
     // Create path to entrance
@@ -159,6 +225,49 @@ export async function setupScene(scene) {
     if (outside) {
       sceneObjects.outsideElements = outside;
     }
+
+
+        // Add floating text sign
+    let floatingText = null;
+    try {
+      const texture = createTextTexture('Win the game to unlock a reward', {
+        width: 700,
+        height: 128,
+        font: 'bold 42px "Trebuchet MS", Arial, sans-serif'
+      });
+      
+      const geometry = new THREE.PlaneGeometry(14, 3.5);
+      const material = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        side: THREE.DoubleSide,
+        opacity: 1.0,
+        blending: THREE.AdditiveBlending 
+      });
+      
+      floatingText = new THREE.Mesh(geometry, material);
+      
+      // Position on the left side of the entrance path
+      floatingText.position.set(-8, 1.5, doorZ + 15);
+      
+      // Add animation data
+      floatingText.userData = {
+        floatHeight: 0.4,
+        baseY: 1.5 
+      };
+      
+      scene.add(floatingText);
+      
+      // Store in sceneObjects for animation updates
+      sceneObjects.floatingText = floatingText;
+
+      console.log('Floating text created successfully');
+    } catch (err) {
+      console.error('Failed to create floating text:', err);
+    }
+
+
+
     console.log('Scene initialization complete');
     return { walls, floor, ceiling, outside, path, table, torches };
   } catch (error) {
@@ -232,3 +341,4 @@ export function setupShadows(walls, floor, ceiling, table) {
   
   console.log('Shadow setup complete');
 }
+
