@@ -8,41 +8,41 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { setupBaseLighting, addWallTorches } from './lighting.js';
 
 
-// Helper function to create a text texture
 function createTextTexture(text, options = {}) {
   const canvas = document.createElement('canvas');
   canvas.width = options.width || 700;
   canvas.height = options.height || 128;
   
   const context = canvas.getContext('2d');
-
   context.clearRect(0, 0, canvas.width, canvas.height);
-  
   
   // Text settings
   context.font = options.font || 'bold 40px Trebuchet MS, Arial, sans-serif';
   context.textAlign = 'center';
   context.textBaseline = 'middle';
 
+  // Draw shadows first (without text content)
   const colors = [
     { color: 'rgba(0, 204, 255, 0.3)', blur: 20 },
     { color: 'rgba(138, 43, 226, 0.3)', blur: 15 },
     { color: 'rgba(255, 102, 0, 0.3)', blur: 10 }
   ];
   
-  colors.forEach(({color, blur}) => {
-    context.shadowColor = color;
-    context.shadowBlur = blur;
-    context.shadowOffsetX = 0;
-    context.shadowOffsetY = 0;
-    context.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    context.fillText(text, canvas.width/2, canvas.height/2);
-  });
+  // Only draw the text ONCE with shadows
+  // Set up the final shadow
+  context.shadowColor = colors[0].color;
+  context.shadowBlur = colors[0].blur;
+  context.shadowOffsetX = 0;
+  context.shadowOffsetY = 0;
   
-  context.shadowBlur = 0;
-  context.shadowColor = 'transparent';
+  // Draw once with white color
   context.fillStyle = 'rgba(255, 255, 255, 1.0)';
-  context.fillText(text, canvas.width/2, canvas.height/2);
+  
+  // Handle multiline text
+  const lines = text.split('\n');
+  lines.forEach((line, index) => {
+    context.fillText(line, canvas.width/2, canvas.height/2 - 20 + (index * 40));
+  });
   
   // Create texture
   const texture = new THREE.CanvasTexture(canvas);
@@ -227,10 +227,10 @@ export async function setupScene(scene) {
     }
 
 
-        // Add floating text sign
+    // Add floating text sign
     let floatingText = null;
     try {
-      const texture = createTextTexture('Win the game to be the Elemental King', {
+      const texture = createTextTexture('Welcome, Challenger!\nStep into the Elemental Chamber', {
         width: 700,
         height: 128,
         font: 'bold 42px "Trebuchet MS", Arial, sans-serif'
