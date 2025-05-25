@@ -23,26 +23,18 @@ async function loadStoneModels() {
       modelPath,
       (gltf) => {
         console.log('Stone models loaded successfully');
-        
-        // Find stone meshes in the scene
         const stones = [];
         gltf.scene.traverse((node) => {
-          // Look for mesh objects that appear to be stones
           if (node.isMesh && node.name.toLowerCase().includes('stone')) {
             const stoneCopy = node.clone();
             stones.push(stoneCopy);
           }
         });
-        
-        // If no specific stone meshes found, use the entire scene
         if (stones.length === 0) {
           const mainStone = gltf.scene.clone();
           stones.push(mainStone);
         }
-        
-        // Cache the models
         stoneModelsCache.push(...stones);
-        
         resolve(stones);
       },
       undefined,
@@ -74,19 +66,11 @@ export async function createPathToEntrance(scene, options = {}) {
     pathPattern: options.pathPattern || true,
     edgeSpacing: options.edgeSpacing || 1.8 
   };
-  
-  // Create a group to hold path segments
   const pathGroup = new THREE.Group();
-  
-  // Create path direction vector
   const pathDirection = new THREE.Vector3().subVectors(config.endPosition, config.startPosition);
   const pathLength = pathDirection.length();
   pathDirection.normalize();
-  
-  // Create path geometry with more segments for better detail
   const pathGeometry = new THREE.PlaneGeometry(pathLength, config.width, 20, 2);
-  
-  // Create path material with a more distinctive color and stronger emissive
   const pathMaterial = new THREE.MeshStandardMaterial({
     color: config.pathColor,
     roughness: 0.5, 
@@ -94,8 +78,6 @@ export async function createPathToEntrance(scene, options = {}) {
     emissive: 0x552222,  
     emissiveIntensity: 0.5
   });
-  
-  // Create path mesh and add it to scene 
   const path = new THREE.Mesh(pathGeometry, pathMaterial);
   path.position.copy(config.startPosition).add(pathDirection.clone().multiplyScalar(pathLength / 2));
   path.position.y += config.heightOffset;
@@ -104,8 +86,6 @@ export async function createPathToEntrance(scene, options = {}) {
   path.rotation.y = Math.PI / 2 - angle;
   path.receiveShadow = true;
   pathGroup.add(path);
-  
-  // Add lights along the path 
   const lightCount = Math.ceil(pathLength / 2.5);
   for (let i = 0; i <= lightCount; i++) {
       const light = new THREE.PointLight(0xff9977, 0.8, 5.5);
@@ -114,7 +94,6 @@ export async function createPathToEntrance(scene, options = {}) {
       pos.y += 0.4;
       light.position.copy(pos);
       scene.add(light);
-      
       const sphereGeometry = new THREE.SphereGeometry(0.22, 10, 10);
       const sphereMaterial = new THREE.MeshBasicMaterial({
         color: 0xff8855, 
@@ -125,7 +104,6 @@ export async function createPathToEntrance(scene, options = {}) {
       sphere.position.copy(light.position);
       pathGroup.add(sphere);
   }
-  
   // Load stone models for path edges
   let stoneModels;
   try {
@@ -139,17 +117,11 @@ export async function createPathToEntrance(scene, options = {}) {
     scene.add(pathGroup);
     return pathGroup;
   }
-  
-  // Add path edge details using 3D stone models 
   const stoneCount = Math.ceil(pathLength / config.edgeSpacing); 
-  
   for (let side = -1; side <= 1; side += 2) {
     for (let i = 0; i < stoneCount; i++) {
-      // Calculate position along path
       const t = (i / stoneCount) + (Math.random() * 0.05);
       const pathPos = new THREE.Vector3().lerpVectors(config.startPosition, config.endPosition, t);
-      
-      // Offset to the side of the path
       const perpendicular = new THREE.Vector3(-pathDirection.z, 0, pathDirection.x);
       const offset = (config.width/2 + 0.4) * side;
       const offsetPos = perpendicular.clone().multiplyScalar(offset);
@@ -157,25 +129,15 @@ export async function createPathToEntrance(scene, options = {}) {
       const randomOffsetZ = (Math.random() - 0.5) * 0.5;
       offsetPos.x += randomOffsetX;
       offsetPos.z += randomOffsetZ;
-      
-      // Select a random stone model
       const stoneIndex = Math.floor(Math.random() * stoneModels.length);
       const stoneModel = stoneModels[stoneIndex].clone();
-      
-      // Make the path edge stones smaller
       const size = 0.15 + Math.random() * 0.15; 
       stoneModel.scale.set(size, size * (0.6 + Math.random() * 0.4), size);
-      
-      // Position the stone model
       stoneModel.position.copy(pathPos).add(offsetPos);
       stoneModel.position.y = -3 + size * 0.3;
-      
-      // Rotate randomly with limited X and Z rotation to keep them upright
       stoneModel.rotation.x = (Math.random() - 0.5) * Math.PI * 0.2;
       stoneModel.rotation.y = Math.random() * Math.PI * 2;
       stoneModel.rotation.z = (Math.random() - 0.5) * Math.PI * 0.2;
-      
-      // Enable shadows
       stoneModel.traverse((node) => {
         if (node.isMesh) {
           node.castShadow = true;
@@ -188,7 +150,6 @@ export async function createPathToEntrance(scene, options = {}) {
           }
         }
       });
-      
       pathGroup.add(stoneModel);
     }
   }
@@ -203,7 +164,6 @@ export async function createPathToEntrance(scene, options = {}) {
     pathGeometry.attributes.position.needsUpdate = true;
     pathGeometry.computeVertexNormals();
   }
-  
   scene.add(pathGroup);
   return pathGroup;
 }
@@ -218,7 +178,6 @@ function addFallbackPathEdges(pathGroup, config, pathDirection) {
   const pathLength = config.endPosition.distanceTo(config.startPosition);
   const stoneCount = Math.ceil(pathLength / 1.8);
   const stoneGeometry = new THREE.DodecahedronGeometry(0.30, 0);
-  
   for (let side = -1; side <= 1; side += 2) {
     for (let i = 0; i < stoneCount; i++) {
       const stoneMaterial = new THREE.MeshStandardMaterial({
@@ -228,28 +187,21 @@ function addFallbackPathEdges(pathGroup, config, pathDirection) {
         emissive: 0x222222,
         emissiveIntensity: 0.3
       });
-      
       const stone = new THREE.Mesh(stoneGeometry, stoneMaterial);
-      
       const t = (i / stoneCount) + (Math.random() * 0.02);
       const pathPos = new THREE.Vector3().lerpVectors(config.startPosition, config.endPosition, t);
-      
       const perpendicular = new THREE.Vector3(-pathDirection.z, 0, pathDirection.x);
       const offset = (config.width/2 + 0.4) * side;
       const offsetPos = perpendicular.clone().multiplyScalar(offset);
-      
       stone.position.copy(pathPos).add(offsetPos);
       stone.position.y = -3 + Math.random() * 0.2;
-      
       stone.rotation.set(
         Math.random() * Math.PI,
         Math.random() * Math.PI,
         Math.random() * Math.PI
       );
-      
       stone.receiveShadow = true;
       stone.castShadow = true;
-      
       pathGroup.add(stone);
     }
   }
@@ -277,11 +229,8 @@ export async function createOutsideScenery(scene, options = {}) {
       cloudsCount: options.cloudsCount || 12,
       groundTextureRepeat: options.groundTextureRepeat || 20
     };
-    // Create dark ground
     const groundGeometry = new THREE.PlaneGeometry(config.groundSize, config.groundSize, 1, 1);
     groundGeometry.setAttribute('uv2', groundGeometry.attributes.uv.clone());
-
-    // Load ground textures
     const groundMaterial = await createGroundMaterial(config.groundTextureRepeat)
     .catch(err => {
       console.warn('Failed to load ground textures, using fallback', err);
@@ -299,12 +248,8 @@ export async function createOutsideScenery(scene, options = {}) {
     ground.position.y = -3.2;
     ground.receiveShadow = true;
     scene.add(ground);
-    
-    // Create night skybox
     const skyGeometry = new THREE.BoxGeometry(config.skyboxSize, config.skyboxSize, config.skyboxSize);
     const skyMaterials = [];
-    
-    // Create a brighter night sky
     for (let i = 0; i < 6; i++) {
       let color;
       if (i === 4) { 
@@ -323,8 +268,6 @@ export async function createOutsideScenery(scene, options = {}) {
 
     const skybox = new THREE.Mesh(skyGeometry, skyMaterials);
     scene.add(skybox);
-    
-    // Create objects based on enabled flags
     let moon = null;
     if (config.moonEnabled) {
       moon = await createMoon(scene);
@@ -415,7 +358,6 @@ function loadTexture(path, options = {}) {
     textureLoader.load(
       path,
       (texture) => {
-        // Configure texture for proper tiling
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
         texture.repeat.set(repeat[0], repeat[1]);
@@ -441,10 +383,9 @@ function createGroundMaterial(repeat = 20) {
       roughnessMap: textures.roughness,
       aoMap: textures.ao,
       displacementMap: textures.displacement,
-      displacementScale: 0.2, // Subtle displacement for ground detail
+      displacementScale: 0.2, 
       roughness: 0.9,
       metalness: 0.1,
-      // Tint the ground slightly to match the red moon atmosphere
       color: 0xaa9999
     });
     
@@ -576,10 +517,7 @@ export async function createRocks(scene, options = {}) {
   while (rockCount < config.count && attempts < 200) {
     const position = generateValidPosition();
     attempts++;
-    
     if (!position) continue;
-    
-    // Random size (smaller for distant rocks to create depth)
     const sizeScale = 1 - (position.distance / (config.spread * 1.5));
     const size = (config.minSize + Math.random() * (config.maxSize - config.minSize)) * Math.max(0.5, sizeScale);
     
@@ -644,7 +582,7 @@ function createFallbackRocks(scene, options = {}) {
     groundLevel: -3
   };
 
-  // Define building boundaries to avoid (same as in createRocks)
+  // Define building boundaries to avoid 
   const buildingBounds = {
     minX: -config.roomWidth/2 - config.buildingPadding,
     maxX: config.roomWidth/2 + config.buildingPadding,
@@ -652,13 +590,13 @@ function createFallbackRocks(scene, options = {}) {
     maxZ: doorZ + config.buildingPadding
   };
   
-  // Define path boundaries (same as in createRocks)
+  // Define path boundaries 
   const pathStart = new THREE.Vector3(0, -3.1, doorZ + 25);
   const pathEnd = new THREE.Vector3(0, -3.1, doorZ);
   const pathDirection = new THREE.Vector3().subVectors(pathEnd, pathStart).normalize();
   const pathLength = pathEnd.distanceTo(pathStart);
 
-  // Function to check if position is on the path (same as in createRocks)
+  // Function to check if position is on the path 
   const isOnPath = (x, z) => {
     const point = new THREE.Vector3(x, -3.1, z);
     const v = new THREE.Vector3().subVectors(point, pathStart);
@@ -676,7 +614,7 @@ function createFallbackRocks(scene, options = {}) {
     return false;
   };
 
-  // Function to check if position is inside building area (same as in createRocks)
+  // Function to check if position is inside building area 
   const isInsideBuilding = (x, z) => {
     return x >= buildingBounds.minX && 
            x <= buildingBounds.maxX && 
@@ -684,13 +622,13 @@ function createFallbackRocks(scene, options = {}) {
            z <= buildingBounds.maxZ;
   };
   
-  // Function to check if position is invalid (same as in createRocks)
+  // Function to check if position is invalid 
   const isInvalidPosition = (x, z) => {
     const outsideBounds = Math.abs(x) > config.mapWidth/2 || Math.abs(z) > config.mapDepth/2;
     return outsideBounds || isInsideBuilding(x, z) || isOnPath(x, z);
   };
 
-  // Helper to generate valid position (same as in createRocks)
+  // Helper to generate valid position 
   const generateValidPosition = () => {
     let attempts = 0;
     let posX, posZ, distance;
@@ -714,21 +652,21 @@ function createFallbackRocks(scene, options = {}) {
   // Create rock materials for fallback rocks
   const rockMaterials = [
     new THREE.MeshStandardMaterial({ 
-      color: 0x222222, // Dark grey
+      color: 0x222222, 
       roughness: 0.9, 
       metalness: 0.2,
       emissive: 0x111111,
       emissiveIntensity: 0.1
     }),
     new THREE.MeshStandardMaterial({ 
-      color: 0x332211, // Dark brown
+      color: 0x332211, 
       roughness: 0.85, 
       metalness: 0.1,
       emissive: 0x110a05,
       emissiveIntensity: 0.1
     }),
     new THREE.MeshStandardMaterial({ 
-      color: 0x1a1a1a, // Almost black
+      color: 0x1a1a1a, 
       roughness: 0.9, 
       metalness: 0.05,
       emissive: 0x0a0a0a,
@@ -755,21 +693,13 @@ function createFallbackRocks(scene, options = {}) {
     attempts++;
     
     if (!position) continue;
-    
-    // Random size (smaller for distant rocks to create depth)
     const sizeScale = 1 - (position.distance / (config.spread * 1.5));
     const size = (config.minSize + Math.random() * (config.maxSize - config.minSize)) * Math.max(0.5, sizeScale);
-    
-    // Select random geometry and material
     const geoIndex = Math.floor(Math.random() * rockGeometries.length);
     const matIndex = Math.floor(Math.random() * rockMaterials.length);
     const geometry = rockGeometries[geoIndex];
     const material = rockMaterials[matIndex];
-    
-    // Create rock mesh
     const rock = new THREE.Mesh(geometry, material);
-    
-    // Position and scale
     rock.position.set(position.posX, config.groundLevel + size/2, position.posZ);
     rock.scale.set(
       size * (0.8 + Math.random() * 0.4), 

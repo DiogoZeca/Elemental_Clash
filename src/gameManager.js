@@ -11,7 +11,7 @@ const registry = {
 
 /**
  * Register the mini-game initialization function
- * @param {Function} initFunction - The function to initialize the mini-game
+ * @param {Function} initFunction 
  */
 export function registerMiniGame(initFunction) {
     registry.miniGameInit = initFunction;
@@ -20,7 +20,7 @@ export function registerMiniGame(initFunction) {
 
 /**
  * Register the exit game function
- * @param {Function} exitFunction - The function to exit the game
+ * @param {Function} exitFunction 
  */
 export function registerExitGame(exitFunction) {
     registry.exitGame = exitFunction;
@@ -41,7 +41,7 @@ export function startMiniGame() {
 
 /**
  * Exit the game with optional transition
- * @param {boolean} useTransition - Whether to use smooth transition
+ * @param {boolean} useTransition 
  */
 export function exitGame(useTransition = false) {
     if (registry.exitGame) {

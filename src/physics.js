@@ -26,7 +26,6 @@ function isInDoorway(position) {
  * Simple wall collision check
  */
 export function isCollidingWithWalls(position) {
-  // Skip wall checks if in doorway
   if (isInDoorway(position)) {
     return false;
   }
@@ -90,7 +89,6 @@ function isCollidingWithTable(position) {
  * Check if position is within game boundaries
  */
 export function isWithinBoundaries(position) {
-  // Check outer boundaries first
   if (position.x < BOUNDARY_CONFIG.minX ||
       position.x > BOUNDARY_CONFIG.maxX ||
       position.z < BOUNDARY_CONFIG.minZ ||
@@ -115,11 +113,8 @@ export function isWithinBoundaries(position) {
  * Very simple movement calculation - no sliding or adjustments
  */
 export function calculateSlideMovement(currentPosition, intendedPosition) {
-  // If intended position is valid, allow it
   if (isWithinBoundaries(intendedPosition)) {
     return intendedPosition;
   }
-  
-  // Otherwise, stay at current position
   return currentPosition;
 }

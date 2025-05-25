@@ -31,10 +31,7 @@ const timers = {
     pointerLock: null,
     countdown: null
 };
-
-// Track keyboard event listener to remove it when done
 let keyboardListener = null;
-
 /**
  * Handle keyboard presses for element selection
  */
@@ -63,7 +60,6 @@ function handleKeyPress(event) {
  * Reset the round for the next battle
  */
 function resetRound() {
-    // Only exit pointer lock once instead of multiple times
     if (document.pointerLockElement) {
         document.exitPointerLock();
     }
@@ -86,8 +82,6 @@ function resetRound() {
             }, 50));
         }, 50));
     }
-    
-    // Allow new selections
     gameState.isAnimating = false;
 }
 
@@ -112,15 +106,12 @@ function cleanupTimers() {
 function updateCard(cardId, element) {
     const card = document.getElementById(cardId);
     if (!card) return;
-    
-    // Update all styles in one batch to reduce reflows
     const elementInfo = elements[element];
     const style = card.style;
     
     style.borderColor = elementInfo.color;
     style.boxShadow = `0 0 20px ${elementInfo.color}66, inset 0 0 10px ${elementInfo.color}33`;
     
-    // Update icon and name directly
     const icon = card.querySelector('.card-icon');
     const name = card.querySelector('.card-name');
     
@@ -139,44 +130,28 @@ function makeChoice(playerElement) {
         gameState.aiScore >= gameState.maxWins || 
         gameState.isAnimating) return;
     
-    // Only exit pointer lock once if needed
     if (document.pointerLockElement) {
         document.exitPointerLock();
     }
     
     gameState.isAnimating = true;
     gameState.playerChoice = playerElement;
-    
-    // Precompute the AI element once, avoiding re-computation
     let aiElement = getRandomElement();
     while (aiElement === playerElement) {
         aiElement = getRandomElement();
     }
     gameState.aiChoice = aiElement;
-    
-    // Update cards - this is faster than recreating elements
     updateCard('player-card', playerElement);
     updateCard('ai-card', aiElement);
-
-    // Start animations only once other operations are complete
     animateCharacter('player', 'playCard');
-    
-    // Use fewer timeouts with a consistent delay pattern
-    // Show first card
     timers.transitions.push(setTimeout(() => {
         const playerCard = document.getElementById('player-card');
         if (playerCard) playerCard.style.transform = 'scale(1)';
-        
-        // Show second card after a delay
         timers.transitions.push(setTimeout(() => {
             const aiCard = document.getElementById('ai-card');
             if (aiCard) aiCard.style.transform = 'scale(1)';
-            
-            // Show results after both cards are visible
             timers.transitions.push(setTimeout(() => {
                 const resultDisplay = document.getElementById('result-display');
-                
-                // Calculate result and update UI in one operation
                 processResults(playerElement, aiElement, resultDisplay);
             }, 400));
         }, 300));
@@ -187,13 +162,11 @@ function makeChoice(playerElement) {
  * Process battle results - separated for better performance
  */
 function processResults(playerElement, aiElement, resultDisplay) {
-    // Calculate winner once
     const result = determineWinner(playerElement, aiElement);
     gameState.result = result;
     
     if (!resultDisplay) return;
     
-    // Show result
     resultDisplay.style.opacity = '1';
     
     // Update score and animations based on result
@@ -201,8 +174,6 @@ function processResults(playerElement, aiElement, resultDisplay) {
         gameState.playerScore++;
         resultDisplay.textContent = `You Win! ${elements[playerElement].description}`;
         resultDisplay.style.color = elements[playerElement].color;
-        
-        // Spread out character animations to reduce simultaneous load
         timers.animations.push(setTimeout(() => {
             animateCharacter('enemy', 'win', playerElement);
             timers.animations.push(setTimeout(() => {
@@ -222,16 +193,11 @@ function processResults(playerElement, aiElement, resultDisplay) {
         }, 100));
     }
     
-    // Update scoreboard - use direct text content update
     const playerScoreElement = document.getElementById('player-score');
     const aiScoreElement = document.getElementById('ai-score');
     if (playerScoreElement) playerScoreElement.textContent = gameState.playerScore.toString();
     if (aiScoreElement) aiScoreElement.textContent = gameState.aiScore.toString();
-    
-    // Increment round counter
     gameState.round++;
-    
-    // Check if game is over
     if (gameState.playerScore >= gameState.maxWins || 
         gameState.aiScore >= gameState.maxWins) {
         timers.transitions.push(setTimeout(showFinalResult, 1500));
@@ -253,30 +219,17 @@ function processResults(playerElement, aiElement, resultDisplay) {
  */
 function showFinalResult() {
     if (document.getElementById('final-overlay')) return;
-    
-    // Only exit pointer lock once if needed
     if (document.pointerLockElement) {
         document.exitPointerLock();
     }
-
-    // Determine if player won
     const isPlayerWinner = gameState.playerScore > gameState.aiScore;
-
-    // Calculate result information once
     if (isPlayerWinner) {
-        // Store victory in localStorage
         localStorage.setItem('elementalClashWon', 'true');
-        
-        // Update floating text
         updateFloatingTextToVictory();
-        
         console.log('Player won! Updating rewards...');
-
         startVictorySequence();
         return;
     }
-    
-    // If we reach here, player lost - show defeat overlay
     showDefeatOverlay();
 }
 
@@ -285,8 +238,6 @@ function showFinalResult() {
  */
 function startVictorySequence() {
     console.log('Starting victory sequence...');
-    
-    // Remove game UI immediately
     const gameUI = document.getElementById('game-ui');
     if (gameUI && gameUI.parentNode) {
         gameUI.style.opacity = '0';
@@ -296,8 +247,6 @@ function startVictorySequence() {
             }
         }, 500);
     }
-
-    // Import and start victory transition
     import('./game.js').then(({ startVictoryTransition }) => {
         if (startVictoryTransition()) {
             console.log('Victory camera transition initiated');
@@ -391,8 +340,6 @@ function createVictoryOverlayWithCountdown() {
             </span>
         </div>
     `;
-    
-    // Add enhanced CSS animations
     const style = document.createElement('style');
     style.textContent = `
         @keyframes victoryPulse {
@@ -418,7 +365,6 @@ function createVictoryOverlayWithCountdown() {
         }
     `;
     document.head.appendChild(style);
-    
     document.body.appendChild(victoryOverlay);
     
     // Start countdown for game restart
@@ -433,12 +379,9 @@ function createVictoryOverlayWithCountdown() {
         
         if (countdown <= 0) {
             clearInterval(countdownTimer);
-            // Restart the entire game (like F5)
             window.location.reload();
         }
     }, 1000);
-    
-    // Store timer for cleanup if needed
     timers.countdown = countdownTimer;
 }
 
@@ -491,28 +434,21 @@ function showDefeatOverlay() {
     `;
     
     document.body.appendChild(finalOverlay);
-    
-    // Setup countdown and button handlers
     let countdown = 3;
     const countdownElement = document.getElementById('countdown');
-
     if (timers.countdown) {
         clearInterval(timers.countdown);
     }
-    
     timers.countdown = setInterval(() => {
         countdown--;
         if (countdownElement) {
             countdownElement.textContent = countdown.toString();
         }
-        
         if (countdown <= 0) {
             clearInterval(timers.countdown);
             cleanupAndExitWithTransition();
         }
     }, 1000);
-    
-    // Add button handlers
     document.getElementById('play-again-btn')?.addEventListener('click', event => {
         event.stopPropagation();
         if (timers.countdown) {
@@ -525,17 +461,12 @@ function showDefeatOverlay() {
         resetGame();
         createOptimizedUI();
     });
-    
     document.getElementById('exit-final-btn')?.addEventListener('click', event => {
         event.stopPropagation();
-        
-        // Clear countdown
         if (timers.countdown) {
             clearInterval(timers.countdown);
             timers.countdown = null;
         }
-        
-        // Exit immediately
         cleanupAndExitWithTransition();
     });
 }
@@ -545,27 +476,17 @@ function showDefeatOverlay() {
  */
 function createOptimizedUI() {
     console.log('Creating optimized mini-game UI...');
-    
-    // Clean up existing UI first
     cleanupTimers();
-    
-    // Remove existing UI if present
     const existingUI = document.getElementById('game-ui');
     if (existingUI) {
         document.body.removeChild(existingUI);
     }
-    
-    // Release pointer lock once at the beginning
     if (document.pointerLockElement) {
         document.exitPointerLock();
     }
-    
-    // Create game UI container - use a document fragment for better performance
     const fragment = document.createDocumentFragment();
     const gameUI = document.createElement('div');
     gameUI.id = 'game-ui';
-    
-    // Set all styles at once to reduce reflow
     Object.assign(gameUI.style, {
         position: 'absolute',
         top: '0',
@@ -584,8 +505,6 @@ function createOptimizedUI() {
         boxSizing: 'border-box',
         overflow: 'auto'
     });
-    
-    // Create header with title and scoreboard
     const header = createHeader();
     gameUI.appendChild(header);
     
@@ -612,15 +531,9 @@ function createOptimizedUI() {
             }
         }, 10);
     });
-    
-    // Append to fragment first, then to document in one operation
     fragment.appendChild(gameUI);
     document.body.appendChild(fragment);
-    
-    // Reset game state
     resetGame();
-    
-    // Setup character animations with a delay to avoid jank
     timers.animations.push(setTimeout(() => {
         animateCharacter('enemy', 'thinking');
         timers.animations.push(setTimeout(() => {
@@ -634,8 +547,6 @@ function createOptimizedUI() {
     }
     keyboardListener = handleKeyPress;
     window.addEventListener('keydown', keyboardListener);
-    
-    // Final pointer lock check - throttled to improve performance
     timers.pointerLock = setTimeout(() => {
         if (document.pointerLockElement) {
             document.exitPointerLock();
@@ -649,23 +560,15 @@ function createOptimizedUI() {
 export function initGame() {
     createOptimizedUI();
 }
-
-// Export the reset function
 export { resetGame };
-
 /**
  * Reset the game state with optimized cleanups
  */
 function resetGame() {
-    // Ensure we clean up all timers first
     cleanupTimers();
-    
-    // Release pointer lock
     if (document.pointerLockElement) {
         document.exitPointerLock();
     }
-    
-    // Reset game state variables in one operation
     Object.assign(gameState, {
         playerScore: 0,
         aiScore: 0,
@@ -675,19 +578,13 @@ function resetGame() {
         result: null,
         isAnimating: false
     });
-    
-    // Cache DOM elements to avoid repeated lookups
     const playerScoreEl = document.getElementById('player-score');
     const aiScoreEl = document.getElementById('ai-score');
     const playerCard = document.getElementById('player-card');
     const aiCard = document.getElementById('ai-card');
     const resultDisplay = document.getElementById('result-display');
-    
-    // Update UI in batches
     if (playerScoreEl) playerScoreEl.textContent = '0';
     if (aiScoreEl) aiScoreEl.textContent = '0';
-    
-    // Hide cards and results in one batch
     if (playerCard) playerCard.style.transform = 'scale(0)';
     if (aiCard) aiCard.style.transform = 'scale(0)';
     if (resultDisplay) resultDisplay.style.opacity = '0';
@@ -698,39 +595,26 @@ function resetGame() {
  */
 function cleanupAndExitWithTransition() {
     console.log('Cleaning up and exiting with optimized transition...');
-    
-    // Ensure we clean up all timers first
     cleanupTimers();
-    
-    // Release pointer lock once
     if (document.pointerLockElement) {
         document.exitPointerLock();
     }
-    
-    // Remove keyboard listener
     if (keyboardListener) {
         window.removeEventListener('keydown', keyboardListener);
         keyboardListener = null;
     }
-    
-    // Remove overlays
     const finalOverlay = document.getElementById('final-overlay');
     if (finalOverlay && finalOverlay.parentNode) {
         document.body.removeChild(finalOverlay);
     }
-
     const victoryOverlay = document.getElementById('victory-overlay');
     if (victoryOverlay && victoryOverlay.parentNode) {
         document.body.removeChild(victoryOverlay);
     }
-    
-    // Fade out the game UI with minimal DOM operations
     const gameUI = document.getElementById('game-ui');
     if (gameUI && gameUI.parentNode) {
         gameUI.style.transition = 'opacity 0.5s';
         gameUI.style.opacity = '0';
-        
-        // Only do the DOM removal after animation completes
         timers.transitions.push(setTimeout(() => {
             if (gameUI.parentNode) {
                 document.body.removeChild(gameUI);
@@ -757,11 +641,9 @@ function getRandomElement() {
  * @returns {string} 'win' for player win, 'lose' for AI win
  */
 function determineWinner(playerElement, aiElement) {
-  // If player's element beats AI's element, player wins
   if (elements[playerElement].beats === aiElement) {
     return 'win';
   }
-  // Otherwise (if AI's element beats player's element), AI wins
   return 'lose';
 }
 
@@ -778,8 +660,6 @@ function createHeader() {
     marginBottom: '20px',
     width: '100%'
   });
-  
-  // Create title using innerHTML once instead of multiple DOM operations
   header.innerHTML = `
     <h1 style="font-size: 3.5rem; margin: 5px 0; color: #ffcc00; text-shadow: 0 0 15px rgba(255, 204, 0, 0.5);">
       Elemental Clash
@@ -914,12 +794,9 @@ function createSelectionArea() {
     gap: '30px'
   });
   
-  // Add all element buttons at once for better performance
   const elementTypes = Object.entries(elements);
   elementTypes.forEach(([element, info]) => {
     const button = document.createElement('button');
-    
-    // Set button attributes and styles in one batch
     Object.assign(button.style, {
       width: '120px',
       height: '120px',
@@ -934,8 +811,6 @@ function createSelectionArea() {
       transition: 'transform 0.2s, box-shadow 0.2s',
       boxShadow: `0 0 15px ${info.color}66`
     });
-    
-    // Set button content in one operation
     button.innerHTML = `
       <div style="font-size: 40px; margin-bottom: 5px;">${info.icon}</div>
       <div style="font-size: 18px; font-weight: bold; color: ${info.color};">${element.charAt(0).toUpperCase() + element.slice(1)}</div>

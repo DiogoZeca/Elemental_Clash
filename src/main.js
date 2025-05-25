@@ -26,12 +26,8 @@ import { animateClouds, createRocks, updateMoonBillboard } from "./outsidescener
 import { startGame, updateCameraTransition } from "./game.js";
 import { updateTorchLights } from "./lighting.js";
 
-
-// Setup core elements
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
-
-// Add a simple visual reference while loading
 const loadingGeometry = new THREE.BoxGeometry(5, 5, 5);
 const loadingMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
 const loadingCube = new THREE.Mesh(loadingGeometry, loadingMaterial);
@@ -49,7 +45,6 @@ const doorPosition = new THREE.Vector3(0, MOVEMENT_CONFIG.playerHeight, doorZ);
 camera.position.set(0, MOVEMENT_CONFIG.playerHeight, doorZ + 25);
 camera.lookAt(doorPosition);
 
-// Create these global variables AFTER camera is defined
 let sceneElements = null;
 window.gameCamera = camera;
 window.gameTable = null;
@@ -61,20 +56,13 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
-// Setup UI
 setupUI();
-
-// Initialize controls
 initControls(camera, document.body, instructions);
-
 // Performance monitor
 const stats = new Stats();
 document.body.appendChild(stats.dom);
-
-// Setup lighting
 const { ambientLight, pointLight } = setupBaseLighting(scene);
 
-// Add foggy environment
 scene.fog = new THREE.FogExp2(0x221122, 0.0008);
 scene.background = new THREE.Color(0x111111);
 
@@ -92,7 +80,6 @@ loadingStatus.style.textAlign = "center";
 loadingStatus.innerHTML = "Loading...";
 document.body.appendChild(loadingStatus);
 
-// Simple animation loop to show something while loading
 function loadingAnimation() {
   if (document.querySelector("#loading-status")) {
     requestAnimationFrame(loadingAnimation);
@@ -103,22 +90,14 @@ function loadingAnimation() {
   }
 }
 loadingAnimation();
-
-// Initialize the scene and start animation loop with proper error handling
 init()
   .then((elements) => {
     document.body.removeChild(loadingStatus);
     scene.remove(loadingCube);
-
     sceneElements = elements;
     window.gameTable = elements.table;
-
     console.log("Scene initialization successful:", sceneElements);
-
-    // Show the start overlay
     createStartOverlay();
-
-    // Start the main animation loop
     animate();
   })
   .catch((error) => {
@@ -127,23 +106,14 @@ init()
     loadingStatus.style.color = "red";
   });
 
-// Animation loop with error handling
 function animate() {
   requestAnimationFrame(animate);
-
   try {
     const time = Date.now();
-
-    // Check if we're in camera transition
     const isTransitioning = updateCameraTransition(camera);
-
-    // Skip movement updates if in game or transitioning
     if (!playerState.inGame && !isTransitioning) {
-      // Update player & camera
       updateMovement(camera);
       updateCameraRotation(camera);
-
-      // Check table proximity if the game is active
       if (playerState.insideRoom && sceneElements && sceneElements.table) {
         checkTableProximity(camera.position, sceneElements.table);
       }
@@ -154,23 +124,16 @@ function animate() {
     if (pointLight) {
       updateGameLighting(pointLight);
     }
-
-    // Animate scene elements with proper checks
     if (sceneObjects) {
       if (sceneObjects.clouds) {
         animateClouds(sceneObjects.clouds);
       }
-
       if (sceneObjects.outsideElements?.moon?.moon) {
         updateMoonBillboard(sceneObjects.outsideElements.moon.moon, camera);
       }
-
-      // Add the floating text billboard update
       if (sceneObjects.floatingText && sceneObjects.floatingText.material) {
         updateFloatingText(sceneObjects.floatingText, camera);
       }
-          
-      // Add torch flickering animation
       if (sceneObjects.torches) {
         updateTorchLights(sceneObjects.torches);
       }
@@ -181,52 +144,37 @@ function animate() {
     } catch (renderError) {
       console.error("Render error:", renderError);
     }
-
     stats.update();
   } catch (error) {
     console.error("Error in animation loop:", error);
   }
 }
 
-// Initialize scene and start game
 async function init() {
-  // Initialize camera angles based on initial look direction
   const initialDirection = new THREE.Vector3()
     .subVectors(doorPosition, camera.position)
     .normalize();
   const initialYaw = Math.atan2(-initialDirection.x, -initialDirection.z);
   const initialPitch = Math.asin(initialDirection.y);
-
   setCameraAngles(initialYaw, initialPitch);
   updateCameraRotation(camera);
-
   try {
-    // Setup scene using the modular approach
     const sceneElements = await setupScene(scene);
-
     if (!sceneElements) {
       throw new Error("Scene setup failed - no scene elements returned");
     }
-
-    // Setup shadows with error handling
-    try {
       setupShadows(
         sceneElements.walls,
         sceneElements.floor,
         sceneElements.ceiling,
         sceneElements.table
       );
-    } catch (shadowError) {
-      console.warn("Shadow setup had issues:", shadowError);
-      // Continue anyway - shadows are not critical
-    }
 
     if (
       sceneElements.table &&
       sceneElements.table.userData &&
       sceneElements.table.userData.collision
     ) {
-      // Setup characters with the scene and table data
       const { setupCharacters, animateCharacter } = await import(
         "./characters.js"
       );
@@ -234,8 +182,6 @@ async function init() {
         scene,
         sceneElements.table.userData.collision
       );
-
-      // Start idle animation for the enemy
       if (characterState && characterState.enemyModel) {
         animateCharacter("enemy", "idle");
         console.log("Enemy character initialized and set to idle");
@@ -244,7 +190,7 @@ async function init() {
 
     return sceneElements;
   } catch (error) {
-    throw error; // Re-throw to be handled by the Promise.catch()
+    throw error; 
   }
 }
 
@@ -253,7 +199,7 @@ function setupUI() {
 
   window.instructions = document.createElement("div");
   instructions.id = "instructions";
-  instructions.style.display = "none"; // Hide it completely
+  instructions.style.display = "none"; 
   document.body.appendChild(instructions);
 
   // Play Game UI 
@@ -278,11 +224,7 @@ function setupUI() {
     inset 0 0 20px rgba(255, 255, 255, 0.15)
   `;
   playPrompt.style.border = "2px solid rgba(255,255,255,0.3)";
-
-  // Add animation
   playPrompt.style.animation = "elementalPulse 3s infinite ease-in-out";
-
-  // Create a style element for the animation
   const style = document.createElement("style");
   style.textContent = `
     @keyframes elementalPulse {
@@ -347,8 +289,6 @@ function setupUI() {
     }
   `;
   document.head.appendChild(style);
-
-  // Enhanced content with elemental icons and themed text
   playPrompt.innerHTML = `
     <div style="display: flex; align-items: center; justify-content: center;">
       <div class="elemental-icon ice-icon" style="margin-right: 12px;">❄️</div>
@@ -386,8 +326,6 @@ window.addEventListener("resize", () => {
 window.addEventListener("error", (event) => {
   console.error("Global error:", event.error);
 });
-
-// Add this function to your main.js
 function createStartOverlay(isPause) {
   const overlay = document.createElement("div");
   overlay.id = "start-overlay";
@@ -473,7 +411,6 @@ function createStartOverlay(isPause) {
     content.appendChild(instructions);
   }
 
-  // Create a container for the buttons with flexible layout
   const buttonContainer = document.createElement("div");
   buttonContainer.style.display = "flex";
   buttonContainer.style.justifyContent = "space-between";
@@ -509,8 +446,6 @@ function createStartOverlay(isPause) {
   playButton.onclick = function () {
     document.body.removeChild(overlay);
   };
-
-  // Add play button to the container
   buttonContainer.appendChild(playButton);
 
   if (isPause) {
@@ -540,28 +475,17 @@ function createStartOverlay(isPause) {
     };
 
     exitButton.onclick = function () {
-      // Reload the page to restart the game
       window.location.reload();
     };
-
-    // Add exit button to the container
     buttonContainer.appendChild(exitButton);
   } else {
-    // If not in pause mode, center the play button
     buttonContainer.style.justifyContent = "center";
   }
-
-  // Add the button container to the content
   content.appendChild(buttonContainer);
-
   overlay.appendChild(content);
   document.body.appendChild(overlay);
-
-  // Add decorative elemental particles
   createOverlayParticles(overlay);
 }
-
-// Add particle animation for overlay background
 function createOverlayParticles(overlay) {
   const particlesContainer = document.createElement("div");
   particlesContainer.style.position = "absolute";
@@ -572,12 +496,9 @@ function createOverlayParticles(overlay) {
   particlesContainer.style.overflow = "hidden";
   particlesContainer.style.pointerEvents = "none";
   particlesContainer.style.zIndex = "-1";
-
-  // Create particles
   const particleCount = 30;
   const elements = ["❄️", "💧", "🔥"];
   const colors = ["#aaddff", "#00ccff", "#ff6600"];
-
   for (let i = 0; i < particleCount; i++) {
     const idx = Math.floor(Math.random() * 3);
     const particle = document.createElement("div");
@@ -617,23 +538,17 @@ function createOverlayParticles(overlay) {
   overlay.appendChild(particlesContainer);
 }
 
-// Add this function to show/hide the overlay menu
 function toggleOverlayMenu() {
-  // Check if we're already in the mini-game
   if (playerState.inGame) {
-    return; // Don't show overlay if in card game, let the mini-game handle ESC
+    return;
   }
-
-  // Check if the overlay already exists
   const existingOverlay = document.getElementById("start-overlay");
 
   if (existingOverlay) {
     document.body.removeChild(existingOverlay);
-    // Re-enable controls when closing the menu
-    playerState.pointerLocked = false; // This will allow the player to regain pointer lock
+    playerState.pointerLocked = false; 
   } else {
-    // Create a new overlay
-    createStartOverlay(true); // Pass true to indicate this is during gameplay
+    createStartOverlay(true); 
   }
 }
 
@@ -644,16 +559,11 @@ document.addEventListener('pointerlockchange', function() {
   // If ESC was pressed and pointer is now unlocked
   if (escPressedForPause && document.pointerLockElement === null) {
     escPressedForPause = false; 
-    
-    // Check if we're not in the mini-game and no overlay is active
     if (!playerState.inGame && !document.getElementById("start-overlay")) {
-      // Create pause menu
       createStartOverlay(true);
     }
   }
 });
-
-// Replace the ESC key listener
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" || event.code === "Escape") {
     if (!playerState.inGame) {

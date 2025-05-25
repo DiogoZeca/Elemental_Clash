@@ -37,14 +37,6 @@ export function checkRoomEntry(position) {
 }
 
 /**
- * Actions to perform when player enters the room
- */
-export function onRoomEntry() {
-  // Room entry logic here
-  return true;
-}
-
-/**
  * Update game lighting based on game state
  */
 export function updateGameLighting(pointLight) {

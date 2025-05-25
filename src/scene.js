@@ -21,45 +21,31 @@ function createTextTexture(text, options = {}) {
   context.textAlign = 'center';
   context.textBaseline = 'middle';
 
-  // Draw shadows first (without text content)
   const colors = [
     { color: 'rgba(0, 204, 255, 0.3)', blur: 20 },
     { color: 'rgba(138, 43, 226, 0.3)', blur: 15 },
     { color: 'rgba(255, 102, 0, 0.3)', blur: 10 }
   ];
   
-  // Only draw the text ONCE with shadows
-  // Set up the final shadow
   context.shadowColor = colors[0].color;
   context.shadowBlur = colors[0].blur;
   context.shadowOffsetX = 0;
   context.shadowOffsetY = 0;
-  
-  // Draw once with white color
   context.fillStyle = 'rgba(255, 255, 255, 1.0)';
   
-  // Handle multiline text
   const lines = text.split('\n');
   lines.forEach((line, index) => {
     context.fillText(line, canvas.width/2, canvas.height/2 - 20 + (index * 40));
   });
-  
-  // Create texture
   const texture = new THREE.CanvasTexture(canvas);
   texture.needsUpdate = true;
   return texture;
 }
 
-
-// Helper function to update the floating text billboard
 export function updateFloatingText(textMesh, camera) {
   if (!textMesh) return;
-  
-  // Billboard effect - always face camera
   textMesh.quaternion.copy(camera.quaternion);
-  
-  // Gentle floating animation
-  const time = Date.now() * 0.001; // Current time in seconds
+  const time = Date.now() * 0.001; 
   if (textMesh.userData && textMesh.userData.baseY !== undefined) {
     textMesh.position.y = textMesh.userData.baseY + 
       Math.sin(time) * textMesh.userData.floatHeight;
@@ -92,7 +78,7 @@ export async function setupScene(scene) {
       sideWallLength: SCENE_CONFIG.roomDepth,
       useConcrete: true,
       includeFrontWall: true,
-      invisibleWalls: false  // Change this from true to false
+      invisibleWalls: false  
     }).catch(err => {
       console.error('Failed to create walls:', err);
       return null;
@@ -113,7 +99,6 @@ export async function setupScene(scene) {
       
       if (torches.length > 0) {
         console.log('Wall torches added successfully');
-        // Store torches in sceneObjects for animation
         sceneObjects.torches = torches;
       }
     }
@@ -170,8 +155,6 @@ export async function setupScene(scene) {
       };
       
        const gltfLoader = new GLTFLoader();
-      
-       // Create a promise to load the table model
       await new Promise((resolve, reject) => {
         gltfLoader.load(
           'models/scenery/wooden_table/scene.gltf',
@@ -179,8 +162,6 @@ export async function setupScene(scene) {
             const tableModel = gltf.scene;
             
             tableModel.scale.set(6, 6, 6);
-            
-            // Position the table
             tableModel.position.set(
               config.positionX,
               config.floorLevel,
@@ -226,8 +207,6 @@ export async function setupScene(scene) {
       sceneObjects.outsideElements = outside;
     }
 
-
-    // Add floating text sign
     let floatingText = null;
     try {
       const texture = createTextTexture('Welcome, Challenger!\nStep into the Elemental Chamber', {
@@ -244,35 +223,22 @@ export async function setupScene(scene) {
         opacity: 1.0,
         blending: THREE.AdditiveBlending 
       });
-      
       floatingText = new THREE.Mesh(geometry, material);
-      
-      // Position on the left side of the entrance path
       floatingText.position.set(-8, 1.5, doorZ + 15);
-      
-      // Add animation data
       floatingText.userData = {
         floatHeight: 0.4,
         baseY: 1.5 
       };
-      
       scene.add(floatingText);
-      
-      // Store in sceneObjects for animation updates
       sceneObjects.floatingText = floatingText;
-
       console.log('Floating text created successfully');
     } catch (err) {
       console.error('Failed to create floating text:', err);
     }
-
-
-
     console.log('Scene initialization complete');
     return { walls, floor, ceiling, outside, path, table, torches };
   } catch (error) {
     console.error('Error initializing scene:', error);
-    // Try to return basic scene for fallback
     return { walls: null, floor: null, ceiling: null, outside: null, path: null, table: null, torches: [] };
   }
 }
@@ -280,8 +246,6 @@ export async function setupScene(scene) {
 // Setup shadows for scene elements
 export function setupShadows(walls, floor, ceiling, table) {
   console.log('Setting up shadows for:', { walls, floor, ceiling, table });
-  
-  // Setup wall shadows
   if (walls) {
     if (walls.frontWall) {
       console.log('Setting up front wall shadows');
@@ -292,8 +256,6 @@ export function setupShadows(walls, floor, ceiling, table) {
         }
       });
     }
-    
-    // Setup individual wall shadows with checks
     ['backWall', 'leftWall', 'rightWall'].forEach(wallName => {
       if (walls[wallName]) {
         walls[wallName].receiveShadow = walls[wallName].castShadow = true;
@@ -324,12 +286,8 @@ export function setupShadows(walls, floor, ceiling, table) {
     
     const moonLight = sceneObjects.outsideElements.moon.moonLight;
     moonLight.castShadow = true;
-    
-    // Configure shadow quality
     moonLight.shadow.mapSize.width = 4096;
     moonLight.shadow.mapSize.height = 4096;
-    
-    // Setup shadow camera frustum
     moonLight.shadow.camera.near = 10;
     moonLight.shadow.camera.far = 350;
     moonLight.shadow.camera.left = -150;
@@ -338,28 +296,21 @@ export function setupShadows(walls, floor, ceiling, table) {
     moonLight.shadow.camera.bottom = -150;
     moonLight.shadow.bias = -0.0003;
   }
-  
   console.log('Shadow setup complete');
 }
-
-// Add this function after the createTextTexture function
 export function updateFloatingTextToVictory() {
   if (!sceneObjects) {
     console.warn('sceneObjects is undefined');
     return;
   }
-  
   if (!sceneObjects.floatingText) {
     console.warn('sceneObjects.floatingText is undefined');
     return;
   }
-  
   try {
     if (sceneObjects.floatingText.material.map) {
       sceneObjects.floatingText.material.map.dispose();
     }
-    
-    // Create new victory texture
     const victoryTexture = createTextTexture('Congratulations! You are an Elemental Master!', {
       width: 700,
       height: 128,
@@ -367,15 +318,10 @@ export function updateFloatingTextToVictory() {
     });
 
     victoryTexture.needsUpdate = true;
-    
-    // Update the material with new texture
     sceneObjects.floatingText.material.map = victoryTexture;
     sceneObjects.floatingText.material.needsUpdate = true;
-    
-    // Add a golden glow effect
     sceneObjects.floatingText.material.emissive = new THREE.Color(0xffd700);
     sceneObjects.floatingText.material.emissiveIntensity = 0.3;
-    
     console.log('Floating text updated to victory message');
   } catch (error) {
     console.error('Failed to update floating text:', error);
