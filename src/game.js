@@ -193,11 +193,6 @@ export function updateCameraTransition(camera) {
     if (transition.isVictoryTransition) {
       console.log("Victory transition complete - camera now looking at sky!");
       
-      // TEMPORARILY DISABLE FIREWORKS TO FIX THE ERROR
-      // Instead, just add a simple console message
-      console.log("🎆 Victory fireworks would appear here! 🎆");
-      
-      // You can add a simple DOM-based celebration effect instead
       createSimpleVictoryCelebration();
       
       return false;
@@ -335,7 +330,7 @@ function createSimpleVictoryCelebration() {
   
   // Create animated celebration elements
   const colors = ['#00ccff', '#ff6600', '#aaddff', '#ffcc00', '#ffffff'];
-  const symbols = ['✨', '🎆', '⭐', '💥', '🌟', '🎉', '⚡', '💫', '🔥', '❄️'];
+  const symbols = ['✨', '⭐', '🌟', '💫', '🔥', '❄️'];
   
   // Create multiple waves of particles
   for (let wave = 0; wave < 3; wave++) {

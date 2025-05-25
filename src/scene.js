@@ -230,7 +230,7 @@ export async function setupScene(scene) {
         // Add floating text sign
     let floatingText = null;
     try {
-      const texture = createTextTexture('Win the game to unlock a reward', {
+      const texture = createTextTexture('Win the game to be the Elemental King', {
         width: 700,
         height: 128,
         font: 'bold 42px "Trebuchet MS", Arial, sans-serif'
