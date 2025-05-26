@@ -1,4 +1,4 @@
-import * as THREE from "three";
+import { Scene, Color, BoxGeometry, MeshBasicMaterial, Mesh, PerspectiveCamera, Vector3, WebGLRenderer, PCFSoftShadowMap, FogExp2 } from "three";
 import Stats from "three/examples/jsm/libs/stats.module.js";
 import { updateCharacterAnimations } from "./characters.js";
 
@@ -26,22 +26,22 @@ import { animateClouds, createRocks, updateMoonBillboard } from "./outsidescener
 import { startGame, updateCameraTransition } from "./game.js";
 import { updateTorchLights } from "./lighting.js";
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x111111);
-const loadingGeometry = new THREE.BoxGeometry(5, 5, 5);
-const loadingMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-const loadingCube = new THREE.Mesh(loadingGeometry, loadingMaterial);
+const scene = new Scene();
+scene.background = new Color(0x111111);
+const loadingGeometry = new BoxGeometry(5, 5, 5);
+const loadingMaterial = new MeshBasicMaterial({ color: 0x00ff00 });
+const loadingCube = new Mesh(loadingGeometry, loadingMaterial);
 loadingCube.position.set(0, 0, -10);
 scene.add(loadingCube);
 
-const camera = new THREE.PerspectiveCamera(
+const camera = new PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
   0.1,
   1000
 );
 
-const doorPosition = new THREE.Vector3(0, MOVEMENT_CONFIG.playerHeight, doorZ);
+const doorPosition = new Vector3(0, MOVEMENT_CONFIG.playerHeight, doorZ);
 camera.position.set(0, MOVEMENT_CONFIG.playerHeight, doorZ + 25);
 camera.lookAt(doorPosition);
 
@@ -49,11 +49,11 @@ let sceneElements = null;
 window.gameCamera = camera;
 window.gameTable = null;
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
 setupUI();
@@ -63,8 +63,8 @@ const stats = new Stats();
 document.body.appendChild(stats.dom);
 const { ambientLight, pointLight } = setupBaseLighting(scene);
 
-scene.fog = new THREE.FogExp2(0x221122, 0.0008);
-scene.background = new THREE.Color(0x111111);
+scene.fog = new FogExp2(0x221122, 0.0008);
+scene.background = new Color(0x111111);
 
 // Show loading status
 const loadingStatus = document.createElement("div");
@@ -151,7 +151,7 @@ function animate() {
 }
 
 async function init() {
-  const initialDirection = new THREE.Vector3()
+  const initialDirection = new Vector3()
     .subVectors(doorPosition, camera.position)
     .normalize();
   const initialYaw = Math.atan2(-initialDirection.x, -initialDirection.z);

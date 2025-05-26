@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { Texture, TextureLoader, RepeatWrapping, MeshStandardMaterial, Scene, Mesh, PlaneGeometry, DoubleSide, BoxGeometry, Group, DirectionalLight, Shape, Path, ExtrudeGeometry } from 'three';
 
 // Texture cache
 const textureCache = new Map();
@@ -7,7 +7,7 @@ const textureCache = new Map();
  * Helper function to load textures
  * @param {string} path - Path to the texture file
  * @param {Object} options - Optional settings for the texture
- * @returns {Promise<THREE.Texture>} - The loaded texture 
+ * @returns {Promise<Texture>} - The loaded texture 
  */
 function loadTexture(path, options = {}) {
   const { repeat = [1, 1] } = options;
@@ -16,13 +16,13 @@ function loadTexture(path, options = {}) {
     return Promise.resolve(textureCache.get(path));
   }
   
-  const textureLoader = new THREE.TextureLoader();
+  const textureLoader = new TextureLoader();
   return new Promise((resolve, reject) => {
     textureLoader.load(
       path,
       (texture) => {
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
+        texture.wrapS = RepeatWrapping;
+        texture.wrapT = RepeatWrapping;
         texture.repeat.set(repeat[0], repeat[1]);
         textureCache.set(path, texture);
         resolve(texture);
@@ -61,11 +61,11 @@ function loadBrickTextures(repeat = 3) {
 /**
  * Creates a PBR material using brick textures
  * @param {number} repeat - Texture repeat value
- * @returns {Promise<THREE.MeshStandardMaterial>} The created material
+ * @returns {Promise<MeshStandardMaterial>} The created material
  */
 function createBrickMaterial(repeat = 3) {
   return loadBrickTextures(repeat).then(textures => {
-    const material = new THREE.MeshStandardMaterial({
+    const material = new MeshStandardMaterial({
       map: textures.color,
       normalMap: textures.normal,
       roughnessMap: textures.roughness,
@@ -106,11 +106,11 @@ function loadTilesTextures() {
 
 /**
  * Creates a PBR material using tile textures
- * @returns {Promise<THREE.MeshStandardMaterial>} The created material
+ * @returns {Promise<MeshStandardMaterial>} The created material
  */
 function createTilesMaterial() {
   return loadTilesTextures().then(textures => {
-    const material = new THREE.MeshStandardMaterial({
+    const material = new MeshStandardMaterial({
       map: textures.color,
       normalMap: textures.normal,
       roughnessMap: textures.roughness,
@@ -128,9 +128,9 @@ function createTilesMaterial() {
 
 /**
  * Creates a floor with tile texture that aligns with the walls
- * @param {THREE.Scene} scene - The scene to add the floor to
+ * @param {Scene} scene - The scene to add the floor to
  * @param {Object} options - Configuration options
- * @returns {Promise<THREE.Mesh>} - The created floor
+ * @returns {Promise<Mesh>} - The created floor
  */
 export async function createTilesFloor(scene, options = {}) {
   console.log('Creating tiles textured floor...');
@@ -145,9 +145,9 @@ export async function createTilesFloor(scene, options = {}) {
   const floorMaterial = await createTilesMaterial();
   console.log('Using tiles material for floor');
   
-  const floorGeometry = new THREE.PlaneGeometry(config.width, config.depth);
+  const floorGeometry = new PlaneGeometry(config.width, config.depth);
   floorGeometry.setAttribute('uv2', floorGeometry.attributes.uv.clone());
-  const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+  const floor = new Mesh(floorGeometry, floorMaterial);
   floor.rotation.x = -Math.PI / 2;
   floor.position.set(
     0,
@@ -162,9 +162,9 @@ export async function createTilesFloor(scene, options = {}) {
 
 /**
  * Creates a ceiling with the same brick texture as the walls
- * @param {THREE.Scene} scene - The scene to add the ceiling to
+ * @param {Scene} scene - The scene to add the ceiling to
  * @param {Object} options - Configuration options
- * @returns {Promise<THREE.Mesh>} - The created ceiling
+ * @returns {Promise<Mesh>} - The created ceiling
  */
 export async function createMetalCeiling(scene, options = {}) {
   console.log('Creating brick textured ceiling...');
@@ -179,20 +179,20 @@ export async function createMetalCeiling(scene, options = {}) {
   
   // Get ceiling material - no fallback
   const ceilingMaterial = await createBrickMaterial(5.02);
-  ceilingMaterial.side = THREE.DoubleSide;
+  ceilingMaterial.side = DoubleSide;
   ceilingMaterial.transparent = false;
   ceilingMaterial.opacity = 1.0;
   if (ceilingMaterial.displacementMap) {
     ceilingMaterial.displacementScale = 0.01; 
   }
 
-  const ceilingGeometry = new THREE.BoxGeometry(
+  const ceilingGeometry = new BoxGeometry(
     config.width, 
     config.thickness, 
     config.depth
   );
   ceilingGeometry.setAttribute('uv2', ceilingGeometry.attributes.uv.clone());
-  const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
+  const ceiling = new Mesh(ceilingGeometry, ceilingMaterial);
   ceiling.position.set(
     0,
     config.floorLevel + config.ceilingHeight - (config.thickness/2), 
@@ -218,19 +218,19 @@ export function createTable(scene, options = {}) {
     woodColor: options.woodColor || 0x5c3a21,
     legThickness: options.legThickness || 0.4
   };
-  const tableGroup = new THREE.Group();
-  const tableTopGeometry = new THREE.BoxGeometry(
+  const tableGroup = new Group();
+  const tableTopGeometry = new BoxGeometry(
     config.width, 
     0.3, 
     config.depth
   );
-  const woodMaterial = new THREE.MeshStandardMaterial({
+  const woodMaterial = new MeshStandardMaterial({
     color: config.woodColor,
     roughness: 0.7,
     metalness: 0.2,
     bumpScale: 0.02
   });
-  const tableTop = new THREE.Mesh(tableTopGeometry, woodMaterial);
+  const tableTop = new Mesh(tableTopGeometry, woodMaterial);
   tableTop.position.set(
     config.positionX,
     config.floorLevel + config.height,
@@ -250,12 +250,12 @@ export function createTable(scene, options = {}) {
      z: config.positionZ + config.depth/2 - config.legThickness/2}
   ];
   legPositions.forEach(pos => {
-    const legGeometry = new THREE.BoxGeometry(
+    const legGeometry = new BoxGeometry(
       config.legThickness,
       config.height,
       config.legThickness
     );
-    const leg = new THREE.Mesh(legGeometry, woodMaterial);
+    const leg = new Mesh(legGeometry, woodMaterial);
     leg.position.set(
       pos.x,
       config.floorLevel + config.height/2,
@@ -265,7 +265,7 @@ export function createTable(scene, options = {}) {
     leg.receiveShadow = true;
     tableGroup.add(leg);
   });
-  const highlight = new THREE.DirectionalLight(0xffffaa, 0.4);
+  const highlight = new DirectionalLight(0xffffaa, 0.4);
   highlight.position.set(0, 5, 0);
   highlight.target = tableTop;
   tableGroup.add(highlight);
@@ -283,7 +283,7 @@ export function createTable(scene, options = {}) {
 
 /**
  * Creates a 3-wall environment with concrete-like material
- * @param {THREE.Scene} scene - The scene to add walls to
+ * @param {Scene} scene - The scene to add walls to
  * @param {Object} options - Wall configuration options
  * @returns {Promise<Object>} - References to created walls
  */
@@ -318,12 +318,12 @@ export async function createWallEnvironment(scene, options = {}) {
     };
     
     // 1. BACK WALL
-    const backWallGeometry = createGeometryWithUV2(new THREE.BoxGeometry(
+    const backWallGeometry = createGeometryWithUV2(new BoxGeometry(
       config.backWallWidth, 
       config.wallHeight, 
       config.wallDepth
     ));
-    const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
+    const backWall = new Mesh(backWallGeometry, wallMaterial);
     backWall.position.set(
       0, 
       config.wallHeight/2 + config.floorLevel, 
@@ -334,13 +334,13 @@ export async function createWallEnvironment(scene, options = {}) {
     scene.add(backWall);
     
     // 2. LEFT SIDE WALL
-    const leftWallGeometry = createGeometryWithUV2(new THREE.BoxGeometry(
+    const leftWallGeometry = createGeometryWithUV2(new BoxGeometry(
       config.wallDepth, 
       config.wallHeight, 
       config.sideWallLength
     ));
 
-    const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
+    const leftWall = new Mesh(leftWallGeometry, wallMaterial);
     leftWall.position.set(
       -config.backWallWidth/2, 
       config.wallHeight/2 + config.floorLevel, 
@@ -351,12 +351,12 @@ export async function createWallEnvironment(scene, options = {}) {
     scene.add(leftWall);
     
     // 3. RIGHT SIDE WALL
-    const rightWallGeometry = createGeometryWithUV2(new THREE.BoxGeometry(
+    const rightWallGeometry = createGeometryWithUV2(new BoxGeometry(
       config.wallDepth, 
       config.wallHeight, 
       config.sideWallLength
     ));
-    const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial);
+    const rightWall = new Mesh(rightWallGeometry, wallMaterial);
     rightWall.position.set(
       config.backWallWidth/2, 
       config.wallHeight/2 + config.floorLevel, 
@@ -375,20 +375,20 @@ export async function createWallEnvironment(scene, options = {}) {
       const doorHeight = 8;
       
       // Create wall with doorway cutout using ShapeGeometry
-      const wallShape = new THREE.Shape();
+      const wallShape = new Shape();
       wallShape.moveTo(-config.backWallWidth/2, -config.wallHeight/2);
       wallShape.lineTo(config.backWallWidth/2, -config.wallHeight/2);
       wallShape.lineTo(config.backWallWidth/2, config.wallHeight/2);
       wallShape.lineTo(-config.backWallWidth/2, config.wallHeight/2);
       wallShape.lineTo(-config.backWallWidth/2, -config.wallHeight/2);
-      const doorHole = new THREE.Path();
+      const doorHole = new Path();
       doorHole.moveTo(-doorWidth/2, -config.wallHeight/2); 
       doorHole.lineTo(doorWidth/2, -config.wallHeight/2);
       doorHole.lineTo(doorWidth/2, doorHeight - config.wallHeight/2); 
       doorHole.lineTo(-doorWidth/2, doorHeight - config.wallHeight/2); 
       doorHole.lineTo(-doorWidth/2, -config.wallHeight/2); 
       wallShape.holes.push(doorHole);
-      const wallGeometry = new THREE.ExtrudeGeometry(wallShape, {
+      const wallGeometry = new ExtrudeGeometry(wallShape, {
         depth: config.wallDepth,
         bevelEnabled: false
       });
@@ -407,17 +407,17 @@ export async function createWallEnvironment(scene, options = {}) {
       );
       if (frontWallMaterial.normalMap) {
         frontWallMaterial.normalMap.repeat.copy(frontWallMaterial.map.repeat);
-        frontWallMaterial.normalMap.wrapS = frontWallMaterial.normalMap.wrapT = THREE.RepeatWrapping;
+        frontWallMaterial.normalMap.wrapS = frontWallMaterial.normalMap.wrapT = RepeatWrapping;
       }
       if (frontWallMaterial.roughnessMap) {
         frontWallMaterial.roughnessMap.repeat.copy(frontWallMaterial.map.repeat);
-        frontWallMaterial.roughnessMap.wrapS = frontWallMaterial.roughnessMap.wrapT = THREE.RepeatWrapping;
+        frontWallMaterial.roughnessMap.wrapS = frontWallMaterial.roughnessMap.wrapT = RepeatWrapping;
       }
       if (frontWallMaterial.aoMap) {
         frontWallMaterial.aoMap.repeat.copy(frontWallMaterial.map.repeat);
-        frontWallMaterial.aoMap.wrapS = frontWallMaterial.aoMap.wrapT = THREE.RepeatWrapping;
+        frontWallMaterial.aoMap.wrapS = frontWallMaterial.aoMap.wrapT = RepeatWrapping;
       }
-      const wallMesh = new THREE.Mesh(wallGeometry, frontWallMaterial);
+      const wallMesh = new Mesh(wallGeometry, frontWallMaterial);
       wallMesh.position.set(
         0,
         config.wallHeight/2 + config.floorLevel,
@@ -440,9 +440,9 @@ export async function createWallEnvironment(scene, options = {}) {
     };
   } catch (error) {
     console.error('Error creating walls:', error);
-    const wallGeometry = new THREE.PlaneGeometry(20, 15);
-    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x554433 });
-    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+    const wallGeometry = new PlaneGeometry(20, 15);
+    const wallMaterial = new MeshStandardMaterial({ color: 0x554433 });
+    const wall = new Mesh(wallGeometry, wallMaterial);
     wall.position.z = -10;
     wall.receiveShadow = true;
     scene.add(wall);

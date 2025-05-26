@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { Group } from 'three';
 import { BOUNDARY_CONFIG, WALL_CONFIG, SCENE_CONFIG, doorZ } from './config.js';
 
 // Add a reference to store the table object
@@ -6,7 +6,7 @@ let tableObject = null;
 
 /**
  * Set table reference for collision detection
- * @param {THREE.Group} table - The table object
+ * @param {Group} table - The table object
  */
 export function setTableReference(table) {
   tableObject = table;

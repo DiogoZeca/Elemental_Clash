@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { CanvasTexture, Vector3, Group, Box3, PlaneGeometry, MeshBasicMaterial, DoubleSide, AdditiveBlending, Mesh, Color } from 'three';
 import { SCENE_CONFIG, doorZ } from './config.js';
 import { createWallEnvironment, createMetalCeiling, createTilesFloor, createTable } from './sceneLoader.js';
 import { createOutsideScenery, addClouds, createPathToEntrance } from './outsidescenery.js';
@@ -37,7 +37,7 @@ function createTextTexture(text, options = {}) {
   lines.forEach((line, index) => {
     context.fillText(line, canvas.width/2, canvas.height/2 - 20 + (index * 40));
   });
-  const texture = new THREE.CanvasTexture(canvas);
+  const texture = new CanvasTexture(canvas);
   texture.needsUpdate = true;
   return texture;
 }
@@ -63,8 +63,8 @@ export async function setupScene(scene) {
   try {
     // Create path to entrance
     const path = createPathToEntrance(scene, {
-      startPosition: new THREE.Vector3(0, -3.1, doorZ + 25), 
-      endPosition: new THREE.Vector3(0, -3.1, doorZ),        
+      startPosition: new Vector3(0, -3.1, doorZ + 25), 
+      endPosition: new Vector3(0, -3.1, doorZ),        
       width: 4.0,                                          
       pathColor: 0x664444                                
     });
@@ -146,7 +146,7 @@ export async function setupScene(scene) {
     // Create table 
     let table = null;
     try {
-      table = new THREE.Group();
+      table = new Group();
       
       const config = {
         positionX: 0,
@@ -174,7 +174,7 @@ export async function setupScene(scene) {
               }
             });
             table.add(tableModel);
-            const boundingBox = new THREE.Box3().setFromObject(tableModel);
+            const boundingBox = new Box3().setFromObject(tableModel);
             table.userData = {
               collision: {
                 minX: boundingBox.min.x,
@@ -215,15 +215,15 @@ export async function setupScene(scene) {
         font: 'bold 42px "Trebuchet MS", Arial, sans-serif'
       });
       
-      const geometry = new THREE.PlaneGeometry(14, 3.5);
-      const material = new THREE.MeshBasicMaterial({
+      const geometry = new PlaneGeometry(14, 3.5);
+      const material = new MeshBasicMaterial({
         map: texture,
         transparent: true,
-        side: THREE.DoubleSide,
+        side: DoubleSide,
         opacity: 1.0,
-        blending: THREE.AdditiveBlending 
+        blending: AdditiveBlending 
       });
-      floatingText = new THREE.Mesh(geometry, material);
+      floatingText = new Mesh(geometry, material);
       floatingText.position.set(-8, 1.5, doorZ + 15);
       floatingText.userData = {
         floatHeight: 0.4,
@@ -320,7 +320,7 @@ export function updateFloatingTextToVictory() {
     victoryTexture.needsUpdate = true;
     sceneObjects.floatingText.material.map = victoryTexture;
     sceneObjects.floatingText.material.needsUpdate = true;
-    sceneObjects.floatingText.material.emissive = new THREE.Color(0xffd700);
+    sceneObjects.floatingText.material.emissive = new Color(0xffd700);
     sceneObjects.floatingText.material.emissiveIntensity = 0.3;
     console.log('Floating text updated to victory message');
   } catch (error) {

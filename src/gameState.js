@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { Vector3, Object3D } from 'three';
 import { doorZ } from './config.js';
 
 // Player movement state
@@ -55,8 +55,8 @@ export const tableInteraction = {
 
 /**
  * Check if player is near the table for starting the game
- * @param {THREE.Vector3} playerPosition - Current player position
- * @param {THREE.Object3D} table - Reference to the table object
+ * @param {Vector3} playerPosition - Current player position
+ * @param {Object3D} table - Reference to the table object
  */
 export function checkTableProximity(playerPosition, table) {
   if (!table || !table.userData || !table.userData.collision) {
@@ -65,7 +65,7 @@ export function checkTableProximity(playerPosition, table) {
   
   try {
     // Get table center position
-    const tablePosition = new THREE.Vector3(
+    const tablePosition = new Vector3(
       (table.userData.collision.minX + table.userData.collision.maxX) / 2,
       playerPosition.y,
       (table.userData.collision.minZ + table.userData.collision.maxZ) / 2

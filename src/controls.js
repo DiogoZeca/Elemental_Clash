@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { Euler, Vector3 } from 'three';
 import { MOVEMENT_CONFIG } from './config.js';
 import { isWithinBoundaries, calculateSlideMovement } from './physics.js';
 import { playerState, moveState, checkRoomEntry, tableInteraction } from './gameState.js';
@@ -94,7 +94,7 @@ export function setCameraAngles(yaw, pitch) {
  */
 export function updateCameraRotation(camera) {
   // Create quaternion from Euler angles
-  const euler = new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ');
+  const euler = new Euler(cameraPitch, cameraYaw, 0, 'YXZ');
   camera.quaternion.setFromEuler(euler);
 }
 
@@ -147,18 +147,18 @@ export function updateMovement(camera) {
   const speed = moveState.running ? MOVEMENT_CONFIG.runSpeed : MOVEMENT_CONFIG.walkSpeed;
   
   // Handle horizontal movement (same as before)
-  const direction = new THREE.Vector3(0, 0, -1);
+  const direction = new Vector3(0, 0, -1);
   direction.applyQuaternion(camera.quaternion);
   direction.y = 0; // Keep horizontal
   direction.normalize();
   
   // Calculate the right vector (perpendicular to forward direction)
-  const right = new THREE.Vector3(1, 0, 0);
+  const right = new Vector3(1, 0, 0);
   right.applyQuaternion(camera.quaternion);
   right.normalize();
   
   // Calculate movement vector
-  const movement = new THREE.Vector3(0, 0, 0);
+  const movement = new Vector3(0, 0, 0);
   
   // Apply movement based on key states
   if (moveState.forward) movement.addScaledVector(direction, speed);
@@ -197,8 +197,8 @@ export function updateMovement(camera) {
       camera.position.z = newPosition.z;
     } else {
       // Try separate X and Z movement to allow sliding along walls
-      const xMovement = new THREE.Vector3(movement.x, 0, 0);
-      const zMovement = new THREE.Vector3(0, 0, movement.z);
+      const xMovement = new Vector3(movement.x, 0, 0);
+      const zMovement = new Vector3(0, 0, movement.z);
       
       const xPosition = camera.position.clone().add(xMovement);
       const zPosition = camera.position.clone().add(zMovement);

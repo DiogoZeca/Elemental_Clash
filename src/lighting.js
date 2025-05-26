@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { AmbientLight, PointLight, Scene, Vector3, Euler, SphereGeometry, MeshBasicMaterial, Box3, Mesh } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 // Add performance configuration object
@@ -11,9 +11,9 @@ export const LIGHTING_PERFORMANCE = {
 };
 
 export function setupBaseLighting(scene) {
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); 
+    const ambientLight = new AmbientLight(0xffffff, 0.4); 
     scene.add(ambientLight);
-    const pointLight = new THREE.PointLight(0xffeedd, 0.7); 
+    const pointLight = new PointLight(0xffeedd, 0.7); 
     pointLight.position.set(0, 2, -1);
     pointLight.castShadow = !LIGHTING_PERFORMANCE.disableShadows;
     
@@ -31,7 +31,7 @@ export function setupBaseLighting(scene) {
 
 /**
  * Adds wall torches to the scene with flickering light effects
- * @param {THREE.Scene} scene - The scene to add torches to
+ * @param {Scene} scene - The scene to add torches to
  * @param {Object} walls - The wall objects from createWallEnvironment
  * @param {Object} options - Configuration options
  * @returns {Promise<Array>} - Array of created torch objects
@@ -70,55 +70,55 @@ export async function addWallTorches(scene, walls, options = {}) {
   const torchPositions = [
     // Left wall torch 
     { 
-      position: new THREE.Vector3(
+      position: new Vector3(
         wallDetails.sideWallX.left, 
         config.floorLevel + (wallDetails.wallHeight * 0.6), 
         -5 
       ),
-      rotation: new THREE.Euler(0, 0, 0), 
-      wallDirection: new THREE.Vector3(-1, 0, 0),    
+      rotation: new Euler(0, 0, 0), 
+      wallDirection: new Vector3(-1, 0, 0),    
       embedDepth: 0.5 
     },
     // Right wall torch 
     { 
-      position: new THREE.Vector3(
+      position: new Vector3(
         wallDetails.sideWallX.right, 
         config.floorLevel + (wallDetails.wallHeight * 0.6), 
         -5 
       ),
-      rotation: new THREE.Euler(0, Math.PI, 0), 
-      wallDirection: new THREE.Vector3(1, 0, 0),     
+      rotation: new Euler(0, Math.PI, 0), 
+      wallDirection: new Vector3(1, 0, 0),     
       embedDepth: 0.5
     },
     // Back wall torch 
     { 
-      position: new THREE.Vector3(
+      position: new Vector3(
         0,
         config.floorLevel + (wallDetails.wallHeight * 0.6),
         wallDetails.backWallZ
       ),
-      rotation: new THREE.Euler(0, -Math.PI/2, 0), 
-      wallDirection: new THREE.Vector3(0, 0, -1),    
+      rotation: new Euler(0, -Math.PI/2, 0), 
+      wallDirection: new Vector3(0, 0, -1),    
       embedDepth: 0.5
     }
   ];
 
-  const flameGeometry = new THREE.SphereGeometry(
+  const flameGeometry = new SphereGeometry(
     0.1, 
     performanceMode ? 4 : 8, 
     performanceMode ? 3 : 6  
   );
-  const glowGeometry = new THREE.SphereGeometry(
+  const glowGeometry = new SphereGeometry(
     0.2, 
     performanceMode ? 6 : 10,
     performanceMode ? 4 : 6
   );
-  const flameMaterial = new THREE.MeshBasicMaterial({
+  const flameMaterial = new MeshBasicMaterial({
     color: 0xff2200, 
     transparent: true,
     opacity: 0.9,
   });
-  const glowMaterial = new THREE.MeshBasicMaterial({
+  const glowMaterial = new MeshBasicMaterial({
     color: 0xff5500,
     transparent: true,
     opacity: 0.4,
@@ -151,19 +151,19 @@ export async function addWallTorches(scene, walls, options = {}) {
       torch.position.copy(torchInfo.position);
       torch.rotation.copy(torchInfo.rotation);
 
-      const bbox = new THREE.Box3().setFromObject(torch);
-      const modelSize = new THREE.Vector3();
+      const bbox = new Box3().setFromObject(torch);
+      const modelSize = new Vector3();
       bbox.getSize(modelSize);
       
       const adjustedEmbedDepth = Math.min(torchInfo.embedDepth, modelSize.x * 0.3);
-      const torchOffset = new THREE.Vector3()
+      const torchOffset = new Vector3()
         .copy(torchInfo.wallDirection)
         .multiplyScalar(-adjustedEmbedDepth);
         
       torch.position.add(torchOffset);
 
       // Add point light to torch 
-      const light = new THREE.PointLight(
+      const light = new PointLight(
         config.lightColor,
         config.lightIntensity,
         config.lightDistance
@@ -190,14 +190,14 @@ export async function addWallTorches(scene, walls, options = {}) {
       torch.add(light);
       scene.add(torch);
 
-      const torchAmbient = new THREE.PointLight(0xff2200, 1.5, 2.0); 
+      const torchAmbient = new PointLight(0xff2200, 1.5, 2.0); 
       torchAmbient.position.copy(light.position); 
       torch.add(torchAmbient);
-      const flame = new THREE.Mesh(flameGeometry, flameMaterial);
+      const flame = new Mesh(flameGeometry, flameMaterial);
       flame.position.copy(light.position);
       torch.add(flame);
 
-      const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+      const glow = new Mesh(glowGeometry, glowMaterial);
       glow.position.copy(light.position); 
       torch.add(glow);
       

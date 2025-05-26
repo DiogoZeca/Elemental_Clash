@@ -1,5 +1,5 @@
 import { playerState, tableInteraction } from "./gameState.js";
-import * as THREE from "three";
+import { Vector3, Matrix4, Quaternion } from "three";
 import { MOVEMENT_CONFIG } from "./config.js";
 import { 
     setupCharacters, 
@@ -83,13 +83,13 @@ export function startGame(camera, table) {
   originalCameraRotation = camera.quaternion.clone();
   if (table.userData && table.userData.collision) {
     const tableData = table.userData.collision;
-    const tableCenter = new THREE.Vector3(
+    const tableCenter = new Vector3(
       (tableData.minX + tableData.maxX) / 2,
       MOVEMENT_CONFIG.playerHeight - 0.5, 
       (tableData.minZ + tableData.maxZ) / 2
     );
 
-    const sittingPosition = new THREE.Vector3(
+    const sittingPosition = new Vector3(
       tableData.maxX + 2.0,
       tableCenter.y,
       tableCenter.z
@@ -138,12 +138,12 @@ export function updateCameraTransition(camera) {
       easedProgress
     );
   } else {
-    const rotationMatrix = new THREE.Matrix4().lookAt(
+    const rotationMatrix = new Matrix4().lookAt(
       camera.position,
       transition.lookAtPoint,
-      new THREE.Vector3(0, 1, 0)
+      new Vector3(0, 1, 0)
     );
-    const targetRotation = new THREE.Quaternion().setFromRotationMatrix(
+    const targetRotation = new Quaternion().setFromRotationMatrix(
       rotationMatrix
     );
     camera.quaternion.slerpQuaternions(
@@ -213,19 +213,19 @@ export function startVictoryTransition() {
     console.log('Starting victory camera transition...');
     
     // Calculate outdoor position (outside the room, looking up at sky)
-    const outdoorPosition = new THREE.Vector3(0, 5, 35);
-    const skyLookTarget = new THREE.Vector3(0, 20, 25);
+    const outdoorPosition = new Vector3(0, 5, 35);
+    const skyLookTarget = new Vector3(0, 20, 25);
     
     // Store original camera state
     const originalPosition = camera.position.clone();
     const originalQuaternion = camera.quaternion.clone();
     
     // Calculate target rotation to look up at the sky
-    const targetQuaternion = new THREE.Quaternion();
-    const targetMatrix = new THREE.Matrix4().lookAt(
+    const targetQuaternion = new Quaternion();
+    const targetMatrix = new Matrix4().lookAt(
         outdoorPosition,
         skyLookTarget,
-        new THREE.Vector3(0, 1, 0)
+        new Vector3(0, 1, 0)
     );
     targetQuaternion.setFromRotationMatrix(targetMatrix);
     

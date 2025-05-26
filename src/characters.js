@@ -1,4 +1,4 @@
-import * as THREE from "three";
+import { Group, Color, MeshStandardMaterial, PointLight, Vector3, Scene, SphereGeometry, MeshBasicMaterial, Mesh, TetrahedronGeometry, OctahedronGeometry, IcosahedronGeometry, Object3D } from 'three';
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 // Character state
@@ -15,7 +15,7 @@ const gltfLoader = new GLTFLoader();
 /**
  * Load the Among Us 3D model
  * @param {string} type - 'enemy' or 'player'
- * @returns {Promise<THREE.Group>} - A promise that resolves to the loaded model
+ * @returns {Promise<Group>} - A promise that resolves to the loaded model
  */
 function loadAmongUsModel(type) {
   return new Promise((resolve, reject) => {
@@ -28,16 +28,16 @@ function loadAmongUsModel(type) {
         model.scale.set(0.02, 0.02, 0.02);
         const color =
           type === "player"
-            ? new THREE.Color(0x00ccff)
-            : new THREE.Color(0xff4400);
+            ? new Color(0x00ccff)
+            : new Color(0xff4400);
 
         model.traverse((node) => {
           if (node.isMesh) {
-            node.material = new THREE.MeshStandardMaterial({
+            node.material = new MeshStandardMaterial({
               color: color,
               roughness: 0.7,
               metalness: 0.3,
-              emissive: type === "enemy" ? color : new THREE.Color(0x000000),
+              emissive: type === "enemy" ? color : new Color(0x000000),
               emissiveIntensity: type === "enemy" ? 0.5 : 0.3,
             });
             node.castShadow = true;
@@ -59,10 +59,10 @@ function loadAmongUsModel(type) {
 /**
  * Create a character model using the Among Us 3D model
  * @param {string} type - 'enemy' or 'player'
- * @returns {THREE.Group} - The character model
+ * @returns {Group} - The character model
  */
 async function createCharacter(type) {
-  const character = new THREE.Group();
+  const character = new Group();
 
     // Load the Among Us model
     const amongUsModel = await loadAmongUsModel(type);
@@ -72,11 +72,11 @@ async function createCharacter(type) {
     amongUsModel.position.y = 0;
 
     if (type === "enemy") {
-      const enemyLight = new THREE.PointLight(0xff6600, 1.5, 15);
+      const enemyLight = new PointLight(0xff6600, 1.5, 15);
       enemyLight.position.set(0, 1.5, 0);
       character.add(enemyLight);
 
-      const accentLight = new THREE.PointLight(0xff9900, 0.8, 8);
+      const accentLight = new PointLight(0xff9900, 0.8, 8);
       accentLight.position.set(0, -1.0, 0);
       character.add(accentLight);
     }
@@ -102,7 +102,7 @@ async function createCharacter(type) {
 
 /**
  * Position the character at the table
- * @param {THREE.Group} character - The character model
+ * @param {Group} character - The character model
  * @param {string} position - 'player' or 'enemy'
  * @param {Object} tableData - Table collision data
  */
@@ -112,7 +112,7 @@ function positionCharacterAtTable(character, position, tableData) {
   console.log("Positioning character at table:", position);
   console.log("Table data:", tableData);
 
-  const tableCenter = new THREE.Vector3(
+  const tableCenter = new Vector3(
     (tableData.minX + tableData.maxX) / 2,
     0,
     (tableData.minZ + tableData.maxZ) / 2
@@ -125,10 +125,10 @@ function positionCharacterAtTable(character, position, tableData) {
     character.position.set(tableCenter.x, -3.0, tableData.minZ - 1.4);
     character.rotation.y = 0;
 
-    const enemyLight = new THREE.PointLight(0xff6600, 1.5, 15);
+    const enemyLight = new PointLight(0xff6600, 1.5, 15);
     enemyLight.position.set(0, 1.5, 0);
     character.add(enemyLight);
-    const accentLight = new THREE.PointLight(0xff9900, 0.8, 8);
+    const accentLight = new PointLight(0xff9900, 0.8, 8);
     accentLight.position.set(0, -1.0, 0);
     character.add(accentLight);
 
@@ -138,7 +138,7 @@ function positionCharacterAtTable(character, position, tableData) {
 
 /**
  * Create and setup both player and enemy characters
- * @param {THREE.Scene} scene - The scene to add characters to
+ * @param {Scene} scene - The scene to add characters to
  * @param {Object} tableData - Table collision data
  */
 export async function setupCharacters(scene, tableData) {
@@ -165,7 +165,7 @@ export async function setupCharacters(scene, tableData) {
 
 /**
  * Animate the Among Us character model
- * @param {THREE.Group} model - The character model
+ * @param {Group} model - The character model
  * @param {string} action - The animation action
  * @param {string} character - The character type ('player' or 'enemy')
  * @param {string} element - Optional element type ('fire', 'ice', 'water')
@@ -283,18 +283,18 @@ function animateAmongUsModel(model, action, character, element = null) {
       
     case "win":
       // Create container for all effects
-      const effectsGroup = new THREE.Group();
+      const effectsGroup = new Group();
       model.add(effectsGroup);
       model.userData.effectsGroup = effectsGroup;
       
       // Add element color light
       if (element) {
         const elementColor = getElementColor(element);
-        const pulseLight = new THREE.PointLight(elementColor, 3, 10);
+        const pulseLight = new PointLight(elementColor, 3, 10);
         pulseLight.position.set(0, 2, 0);
         effectsGroup.add(pulseLight);
         
-        const particles = new THREE.Group();
+        const particles = new Group();
         particles.position.y = 2.5; 
         effectsGroup.add(particles);
         
@@ -507,7 +507,7 @@ export function animateCharacter(character, action, element = null) {
       const elementConfig = element ? getElementConfig(element) : getElementConfig('fire');
       
       // Create particle system for element
-      const particles = new THREE.Group();
+      const particles = new Group();
       particles.position.y = 5.0; 
       model.add(particles);
       
@@ -526,7 +526,7 @@ export function animateCharacter(character, action, element = null) {
       }, fps);
       
       // Add a simple light for the element effect
-      const victoryLight = new THREE.PointLight(elementColor, 2.0, 12);
+      const victoryLight = new PointLight(elementColor, 2.0, 12);
       victoryLight.position.set(0, 1.5, 0);
       model.add(victoryLight);
       
@@ -586,24 +586,24 @@ export function animateCharacter(character, action, element = null) {
       
       // Create a small "defeat" visual effect 
       // Dont knwo Why are not visible
-      const defeatParticles = new THREE.Group();
+      const defeatParticles = new Group();
       model.add(defeatParticles);
       for (let i = 0; i < 10; i++) {
         const size = Math.random() * 0.3 + 0.15;
-        const geometry = new THREE.SphereGeometry(size, 6, 6);
-        const material = new THREE.MeshBasicMaterial({
+        const geometry = new SphereGeometry(size, 6, 6);
+        const material = new MeshBasicMaterial({
           color: 0x888888,
           transparent: true,
           opacity: 0.6
         });
-        const particle = new THREE.Mesh(geometry, material);
+        const particle = new Mesh(geometry, material);
         particle.position.set(
           (Math.random() - 0.5) * 1.2,
           1.0 + Math.random() * 0.7,
           (Math.random() - 0.5) * 1.2
         );
         particle.userData = {
-          velocity: new THREE.Vector3(
+          velocity: new Vector3(
             (Math.random() - 0.5) * 0.02,
             -0.03 - Math.random() * 0.03,
             (Math.random() - 0.5) * 0.02
@@ -676,8 +676,8 @@ function getElementConfig(elementType) {
         particleGeometry: (size) => {
           // Mix of shapes for fire effect with larger size
           return Math.random() > 0.6 ? 
-            new THREE.TetrahedronGeometry(size * 1.5) : 
-            new THREE.SphereGeometry(size, 8, 8);
+            new TetrahedronGeometry(size * 1.5) : 
+            new SphereGeometry(size, 8, 8);
         },
         positionParticle: (particle) => {
           // Position around character
@@ -689,7 +689,7 @@ function getElementConfig(elementType) {
         },
         createVelocity: () => {
           // Upward flame-like movement
-          return new THREE.Vector3(
+          return new Vector3(
             (Math.random() - 0.5) * 0.08,
             0.05 + Math.random() * 0.12, 
             (Math.random() - 0.5) * 0.08
@@ -719,8 +719,8 @@ function getElementConfig(elementType) {
         particleGeometry: (size) => {
           // Crystal-like shapes for ice - larger
           return Math.random() > 0.5 ? 
-            new THREE.OctahedronGeometry(size * 1.3) : 
-            new THREE.IcosahedronGeometry(size * 1.2);
+            new OctahedronGeometry(size * 1.3) : 
+            new IcosahedronGeometry(size * 1.2);
         },
         positionParticle: (particle) => {
           // Around character
@@ -732,7 +732,7 @@ function getElementConfig(elementType) {
         },
         createVelocity: () => {
           // Gentle floating/falling movement
-          return new THREE.Vector3(
+          return new Vector3(
             (Math.random() - 0.5) * 0.04,
             -0.01 + Math.random() * 0.05, // Some rise, some fall
             (Math.random() - 0.5) * 0.04
@@ -763,7 +763,7 @@ function getElementConfig(elementType) {
           color: 0x0088ff,
           particleGeometry: (size) => {
             // Larger water droplets
-            return new THREE.SphereGeometry(size * 1.2, 8, 8);
+            return new SphereGeometry(size * 1.2, 8, 8);
           },
           positionParticle: (particle) => {
             // Position in waves around character
@@ -775,7 +775,7 @@ function getElementConfig(elementType) {
           },
         createVelocity: () => {
           // Wave-like movement pattern
-          return new THREE.Vector3(
+          return new Vector3(
             (Math.random() - 0.5) * 0.05,
             0.02 + Math.random() * 0.04, // Mostly rising
             (Math.random() - 0.5) * 0.05
@@ -814,7 +814,7 @@ function createElementParticle(elementConfig) {
   const particleGeom = elementConfig.particleGeometry(particleSize);
   
   // Create even more visible material with stronger glow
-  const particleMat = new THREE.MeshStandardMaterial({
+  const particleMat = new MeshStandardMaterial({
     color: elementConfig.color,
     emissive: elementConfig.color,
     emissiveIntensity: 3.0, 
@@ -824,12 +824,12 @@ function createElementParticle(elementConfig) {
     roughness: 0.4
   });
   
-  const particle = new THREE.Mesh(particleGeom, particleMat);
+  const particle = new Mesh(particleGeom, particleMat);
   elementConfig.positionParticle(particle);
   
   // Add internal point light to some particles for extra glow
   if (Math.random() > 0.9) {
-    const pointLight = new THREE.PointLight(elementConfig.color, 0.8,4);
+    const pointLight = new PointLight(elementConfig.color, 0.8,4);
     pointLight.position.set(0, 0, 0);
     particle.add(pointLight);
   }
@@ -853,7 +853,7 @@ function createElementParticle(elementConfig) {
 
 /**
  * Reset character to default pose
- * @param {THREE.Group} model - The character model
+ * @param {Group} model - The character model
  */
 function resetCharacterPose(model) {
   if (!model || !model.userData || !model.userData.bodyParts) return;
@@ -910,7 +910,7 @@ function resetCharacterPose(model) {
 
 /**
  * Animate a body part to a new position/rotation
- * @param {THREE.Object3D} part - The body part to animate
+ * @param {Object3D} part - The body part to animate
  * @param {Object} target - Target position and rotation
  * @param {number} fps - Animation frame rate
  */
