@@ -10,5 +10,15 @@ export default defineConfig({
   define: {
     'process.env': {},
     global: {}
+  },
+  assetsInclude: ['**/*.gltf', '**/*.bin', '**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.txt'],
+  publicDir: 'public',
+  build: {
+    copyPublicDir: true,
+    rollupOptions: {
+      input: {
+        main: './index.html'
+      }
+    }
   }
 });
